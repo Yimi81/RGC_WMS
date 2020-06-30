@@ -1,0 +1,92 @@
+﻿@charset "utf-8";
+/* CSS reset */
+body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,
+form,fieldset,input,textarea,p,blockquote,th,td,a {padding: 0;margin: 0;}
+table {border-collapse: collapse; /*单元格的压缩*/border-spacing: 0;margin: 0;padding: 0;}
+fieldset,img {border: 0;}
+address,caption,cite,code,dfn,em,var {font-weight: normal;font-style: normal;}
+ol,ul {list-style: none;}
+caption,th {text-align: left;}
+h1,h2,h3,h4,h5,h6 {font-weight: normal;font-size: 100%;}
+q:before,q:after {content:'';}
+abbr,acronym { border: 0;}
+a{text-decoration: none;color: #333;}
+i{font-style: normal;}
+/*文字排版*/;
+.fs12{font-size: 12px;}
+.fs14{font-size: 14px;}
+.fs16{font-size: 16px;}
+.fs18{font-size: 18px;}
+.fs20{font-size: 20px;}
+.fs22{font-size: 22px;}
+.fs24{font-size: 24px;}
+.fs26{font-size: 26px;}
+.fs28{font-size: 28px;}
+.fsi{font-style: italic;}
+.fwn{font-weight: normal;}
+.fwb{font-weight: bolder;}
+.lh20{line-height: 20px;}
+.lh30{line-height: 30px;}
+.lh40{line-height: 40px;}
+/*定位*/
+.tc{text-align: center;}
+.tl{text-align: left;}
+.tr{text-align: right;}
+.mc{margin: 0 auto;}
+.fl{float: left;display: inline;}/*inline,解决IE6的双外边距*/
+.fr{float: right;display: inline;}
+.vt{vertical-align: top;}
+.vm{vertical-align: middle;}
+.vb{vertical-align: bottom;}
+.vtt{vertical-align: text-top;}
+.vtb{vertical-align: text-bottom;}
+.pr{position: relative;}
+.pa{position: absolute;}
+.pf{position: fixed;}
+.dib{display: inline-block;}
+.db{display: block;}
+.dno{display: none;}
+
+/*边距*/
+.m0{margin:0;}
+.m10{margin: 10px;}
+.m20{margin: 20px;}
+.m30{margin: 30px;}
+.mt10{margin-top: 10px;}
+.mt20{margin-top: 20px;}
+.mt30{margin-top: 30px;}
+.mb10{margin-bottom: 10px;}
+.mb20{margin-bottom: 20px;}
+.mb30{margin-bottom: 30px;}
+.ml10{margin-left: 10px;}
+.ml20{margin-left: 20px;}
+.ml30{margin-left: 30px;}
+.mr10{margin-right: 10px;}
+.mr20{margin-right: 20px;}
+.mr30{margin-right: 30px;}
+.p10{padding: 10px;}
+.p20{padding: 20px;}
+.p30{padding: 30px;}
+.pt10{padding-top: 10px;}
+.pt20{padding-top: 20px;}
+.pt30{padding-top: 30px;}
+.pt40{padding-top: 40px;}
+.pb10{padding-bottom: 10px;}
+.pb20{padding-bottom: 20px;}
+.pb30{padding-bottom: 30px;}
+.pl10{padding-left: 10px;}
+.pl20{padding-left: 20px;}
+.pl30{padding-left: 30px;}
+.pl40{padding-left: 40px;}
+.pr10{padding-right: 10px;}
+.pr20{padding-right: 20px;}
+.pr30{padding-right: 30px;}
+/*清除浮动*/
+.cb{clear: both;}
+.cl{clear: left;}
+.cr{clear: right;}
+.clearfix:after { content: "."; display: block; clear: both; visibility: hidden; line-height: 0; height: 0}
+.clearfix { display: inline-block;vertical-align: middle;}
+html[xmlns] .clearfix { display: block; }
+*html .clearfix { height: 0.1%; }
+.of{overflow:hidden;}

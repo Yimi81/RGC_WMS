@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="h100b">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RGC.WMS.USA</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="http://at.alicdn.com/t/font_1497262_eyip5tvcltq.css">
+    @*<link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/css/site.css" />*@
+    <link href="/lib/element-ui-2.13.0/theme-chalk/index.css" rel="stylesheet" />
+    <link href="/lib/element-ui-2.11.0/theme-chalk/index-black.css" rel="stylesheet" />
+    <link href="/lib/element-ui-2.11.0/theme-chalk/iconfont.css" rel="stylesheet" />
+    <link href="/css/common.css" rel="stylesheet" />
+    <link href="/css/page.css?v=2.1" rel="stylesheet" />
+    <link href="/css/base.css" rel="stylesheet" />
+    <script src="/js/jquery-3.4.1.min.js"></script>
+    <script src="/js/vue-2.6.10.min.js"></script>
+    <script src="/lib/element-ui-2.13.0/index.js"></script>
+    <script src="/js/common.js?v=2.1"></script>
+    @RenderSection("Styles", false)
+</head>
+<body>
+    <div class="h100b">
+        @RenderBody()
+    </div>
+    
+    @*<script src="/lib/jquery/dist/jquery.min.js"></script>
+    <script src="/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/site.js" asp-append-version="true"></script>*@
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

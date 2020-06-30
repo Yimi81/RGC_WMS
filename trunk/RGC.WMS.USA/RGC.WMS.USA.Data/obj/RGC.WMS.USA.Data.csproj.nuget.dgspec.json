@@ -1,0 +1,144 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Data\\RGC.WMS.USA.Data.csproj": {}
+  },
+  "projects": {
+    "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Data\\RGC.WMS.USA.Data.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Data\\RGC.WMS.USA.Data.csproj",
+        "projectName": "RGC.WMS.USA.Data",
+        "projectPath": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Data\\RGC.WMS.USA.Data.csproj",
+        "packagesPath": "C:\\Users\\Dev-10\\.nuget\\packages\\",
+        "outputPath": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Data\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\Dev-10\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.1": {
+            "projectReferences": {
+              "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\RGC.WMS.USA.Domain.csproj": {
+                "projectPath": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\RGC.WMS.USA.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[3.1.0, )"
+            },
+            "Microsoft.Extensions.DependencyModel": {
+              "target": "Package",
+              "version": "[3.1.1, )"
+            },
+            "Pomelo.EntityFrameworkCore.MySql": {
+              "target": "Package",
+              "version": "[3.1.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.301\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\RGC.WMS.USA.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\RGC.WMS.USA.Domain.csproj",
+        "projectName": "RGC.WMS.USA.Domain",
+        "projectPath": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\RGC.WMS.USA.Domain.csproj",
+        "packagesPath": "C:\\Users\\Dev-10\\.nuget\\packages\\",
+        "outputPath": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\Dev-10\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.1": {
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "dependencies": {
+            "Microsoft.Extensions.Options": {
+              "target": "Package",
+              "version": "[3.1.4, )"
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[12.0.3, )"
+            },
+            "System.Drawing.Common": {
+              "target": "Package",
+              "version": "[4.7.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.301\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

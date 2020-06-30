@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RGC.WMS.USA.Domain\RGC.WMS.USA.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="HuigeTec.Core.Domain">
+      <HintPath>..\..\..\..\Release\HuigeTec\HuigeTec.Core.Domain.dll</HintPath>
+    </Reference>
+    <Reference Include="HuigeTec.Core.Helpers">
+      <HintPath>..\..\..\..\Release\HuigeTec\HuigeTec.Core.Helpers.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+  </ItemGroup>
+
+</Project>

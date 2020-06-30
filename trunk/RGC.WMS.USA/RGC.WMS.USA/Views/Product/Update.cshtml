@@ -1,0 +1,1899 @@
+﻿
+@{
+    ViewData["Title"] = "Update";
+}
+
+
+<link rel="stylesheet" href="/lib/elFinder/lib/jquery-ui/themes/base/all.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/elfinder.full.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/theme.css" />
+<style>
+    #nav {
+        width: 100%;
+        /*position: fixed;
+        top: 100px;*/
+        /*ie6下样式，加下划线表示只针对ie6 的hack */
+        _position: absolute; /* 把导航栏位置定义为绝对位置  关键*/
+        _top: expression(documentElement.scrollTop + "px"); /* 把导航栏位置放在浏览器垂直滚动条的顶端  关键 */
+        z-index: 100; /* 让导航栏浮在网页的高层位置，遇到flash和图片时候也能始终保持最外层 */
+    }
+
+    .pl90 {
+        padding-left: 90px;
+    }
+
+    .el-step__title {
+        font-size: 13px !important;
+        line-height: 38px;
+        cursor: pointer;
+    }
+
+    .w145 {
+        width: 145px;
+    }
+
+    .w178 {
+        width: 178px;
+    }
+
+    .w180 {
+        width: 180px;
+    }
+
+    .w250 {
+        width: 250px;
+    }
+
+    .w365 {
+        width: 365px;
+    }
+
+    .avatar {
+        width: 200px;
+        height: 200px;
+        display: block;
+    }
+
+    .el-card {
+        border: none;
+    }
+
+    .el-card__header {
+        border-bottom: none;
+        padding-left: 0;
+    }
+
+    .el-card__body {
+        padding-left: 0;
+    }
+
+    .el-steps--simple {
+        padding: 10px 6% !important;
+    }
+
+    .item_title {
+        height: 35px;
+        padding: 0 15px;
+        margin-bottom: 20px;
+        line-height: 35px;
+        background-color: #E5E9F2;
+        border-radius: 3px;
+    }
+
+        .item_title .el-button {
+            margin-top: 4px;
+        }
+
+    .skuform .el-tabs__header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 9;
+        margin-top: 10px;
+    }
+
+    .savebtn {
+        float: right;
+        position: sticky;
+        top: 4px;
+        right: 10px;
+        z-index: 10;
+        margin-right: 10px;
+    }
+
+    .skuform .el-tabs__item {
+        height: 44px;
+        line-height: 44px;
+    }
+
+    .hide-empty .el-table__empty-block {
+        display: none;
+    }
+
+    .detail-table > .el-table__body-wrapper > table > tbody > tr > td:not(:first-child), .detail-table > .el-table__body-wrapper > table > tbody > tr > td:not(:first-child) > .cell {
+        padding: 0;
+        border: none;
+    }
+</style>
+<body class="plr20">
+    <div id="wrapper">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    @*<el-breadcrumb-item :to="{ path: '../index.html' }">首页</el-breadcrumb-item>*@
+                    <el-breadcrumb-item><strong>产品管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>产品编辑</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <template>
+            <article class="administration-maintenance-container" v-loading="loading">
+                <div ref="nav_sku" id="nav_sku">
+                    <el-button type="primary" size="medium" class="savebtn" v-on:click="operation(false)" v-loading="loading">保 存</el-button>
+                    <el-button type="primary" size="medium" class="savebtn" v-on:click="operation(true)" v-loading="loading">保存并同步</el-button>
+                    <el-form :inline="true" :model="currProduct" ref="currProduct" label-width="300px" class="skuform" label-position="right" size="mini">
+                        <el-tabs v-model="activeName" type="card" @@tab-click="tabClick">
+                            <el-tab-pane label="基本信息" name="first">
+                                <el-card class="box-card" shadow="hover">
+                                    <span slot="header" class="step-jump pr" id="sku_baseInfo">
+                                        <i class="tip-tit"><i class="pr z-in2 pl10">基本信息</i></i>
+                                    </span>
+                                    <el-form-item label="Product Name(产品名称)" prop="fullEName" :rules="[{ required: true, message: '请输入产品名称', trigger: 'blur' }]">
+                                        <el-input v-model="currProduct.fullEName" type="textarea" :rows="1" :autosize="{ minRows: 1, maxRows: 4}"
+                                                  placeholder="产品名称" class="w180" />
+                                    </el-form-item>
+                                    <el-form-item label="Model(型号)" prop="factoryModel" :rules="[{ required: true, message: '请输入型号', trigger: 'blur' }]">
+                                        <el-input v-model="currProduct.factoryModel" class="w180"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="Category(分类)" prop="funcCategoryIds" :rules="[{ required: true, message: '请选择', trigger: 'blur' }]">
+                                        <el-cascader expand-trigger="hover"
+                                                     :options="cascader"
+                                                     v-model="currProduct.funcCategoryIds"
+                                                     class="w180"
+                                                     @*change-on-select*@
+                                                     clearable>
+                                        </el-cascader>
+                                    </el-form-item>
+                                    <el-form-item label="SKU">
+                                        <el-input v-model.trim="currProduct.sku" class="w180"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="UPC">
+                                        <el-input v-model.trim="currProduct.upc" class="w180"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="Certification(认证)">
+                                        <el-input v-model.trim="currProduct.certification" class="w180"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="Package Configuration(包装配置)">
+                                        <el-input v-model.trim="currProduct.packingConfig" class="w180"></el-input>
+                                    </el-form-item>
+                                    <el-row>
+                                        <el-form-item label="Product Dimension(产品尺寸)">
+                                            <el-input-number :controls="false" :precision="2" placeholder="0.00" :min="0.00" v-model.trim="currProduct.productSizeLength"></el-input-number>
+                                            -
+                                            <el-input-number :controls="false" :precision="2" placeholder="0.00" :min="0.00" v-model.trim="currProduct.productSizeWidth"></el-input-number>
+                                            -
+                                            <el-input-number :controls="false" :precision="2" placeholder="0.00" :min="0.00" v-model.trim="currProduct.productSizeHeight"></el-input-number>
+                                            <el-tag type="info" size="small">inch</el-tag>
+                                        </el-form-item>
+                                    </el-row>
+                                    <el-row>
+                                        <el-form-item label="Package Dimension (包装尺寸)">
+                                            <el-input-number :controls="false" :precision="2" placeholder="0.00" :min="0.00" v-model.trim="currProduct.packingSizeLength"></el-input-number>
+                                            -
+                                            <el-input-number :controls="false" :precision="2" placeholder="0.00" :min="0.00" v-model.trim="currProduct.packingSizeWidth"></el-input-number>
+                                            -
+                                            <el-input-number :controls="false" :precision="2" placeholder="0.00" :min="0.00" v-model.trim="currProduct.packingSizeHeight"></el-input-number>
+                                            <el-tag type="info" size="small">inch</el-tag>
+                                        </el-form-item>
+                                    </el-row>
+                                    <el-form-item label="Net Weight (净重)" prop="netWeight">
+                                        <el-input-number class="w145" controls-position="right" :precision="1" :step="0.1" :min="0.0" v-model.trim="currProduct.netWeight"></el-input-number>
+                                        <el-tag type="info" size="small">LB</el-tag>
+                                    </el-form-item>
+                                    <el-form-item label="Gross Weight (毛重)" prop="grossWeight">
+                                        <el-input-number class="w145" controls-position="right" :precision="1" :step="0.1" :min="0.0" v-model.trim="currProduct.grossWeight">
+                                        </el-input-number>
+                                        <el-tag type="info" size="small">LB</el-tag>
+                                    </el-form-item>
+                                    <el-form-item label="qty/pallet(1托数量)">
+                                        <el-input-number class="w180" :controls="false" :precision="0" :min="0" v-model.trim="currProduct.qtyPallet">
+                                        </el-input-number>
+                                    </el-form-item>
+                                    <el-form-item label="qty/40HQ(40HQ装柜数)">
+                                        @*<el-input-number class="w180" :controls="false" :precision="0" :min="0" v-model.trim="currProduct.loadingQty_40HQ">
+                                        </el-input-number>*@
+                                        <el-input class="w180"  v-model.trim="currProduct.loadingQty_40HQ">
+                                        </el-input>
+                                    </el-form-item>
+                                    @*<el-row class="pl90">
+                                            <el-button size="mini" plain v-on:click="addProperty()">添加自定义</el-button>
+                                        </el-row>*@
+                                    <br />
+                                    <el-row class="pl90">
+                                        <el-form size="mini" :inline="true" v-model="Custom">
+                                            <el-form-item v-for="(item,index) in Custom" :key="index">
+                                                <el-row :gutter="12">
+                                                    <el-col :span="10">
+                                                        <el-col :span="12">
+                                                            <el-input placeholder="参数名称" v-model.trim="item.cName" auto-complete="off" icon="edit">
+                                                            </el-input>
+                                                        </el-col>
+                                                        <el-col :span="12">
+                                                            <el-input placeholder="英文名称" v-model.trim="item.eName" auto-complete="off" icon="edit">
+                                                            </el-input>
+                                                        </el-col>
+                                                    </el-col>
+                                                    <el-col :span="10">
+                                                        <el-input placeholder="值" v-model.trim="item.value" auto-complete="off" icon="edit"></el-input>
+                                                    </el-col>
+                                                    <el-col :span="3">
+                                                        <el-button type="danger" icon="el-icon-delete" plain v-on:click="Custom.splice(index , 1)"></el-button>
+                                                    </el-col>
+                                                </el-row>
+                                            </el-form-item>
+                                        </el-form>
+                                    </el-row>
+                                    <el-row>
+                                        <el-form-item label="Remark (产品备注)">
+                                            <el-input v-model="currProduct.remarks" type="textarea" :rows="4"
+                                                      placeholder="Remark (产品备注)" class="w365" />
+                                        </el-form-item>
+                                    </el-row>
+                                </el-card>
+                            </el-tab-pane>
+                            <el-tab-pane label="产品配置/详情" name="second">
+                                <el-card class="box-card" shadow="none" :key="menuKey1">
+                                    <span slot="header" class="step-jump pr" id="sku_config">
+                                        <i class="tip-tit"><i class="pr z-in2 pl10">部件配置详情 Components Configuration/Details</i></i>
+                                    </span>
+                                    <el-button size="mini" plain v-on:click="getPartsList()">添加部件</el-button>
+                                    <el-table empty-text=" " max-height="150"
+                                              style="width: 100%;margin-bottom:0px;" border class="gvq hide-empty mt20" size="mini">
+                                        <el-table-column label="组件名称 Unit" width="150"></el-table-column>
+                                        <el-table-column label="部件名称 Part" width="200" align="center"></el-table-column>
+                                        <el-table-column label="材质 Material" width="300" align="center"></el-table-column>
+                                        <el-table-column label="表面处理 Surface Treatment" width="300" align="center"></el-table-column>
+                                        <el-table-column label="备注 Remarks" align="center"></el-table-column>
+                                    </el-table>
+                                    <el-table class="data-table detail-table" v-loading="listLoading" :data="currProduct.partChildren" :fit="true" border size="mini" :show-header="false" style="width: 100%;">
+                                        <el-table-column width="150">
+                                            <template slot-scope="scope">
+                                                {{scope.row.cName}}
+                                                <br />
+                                                {{scope.row.eName}}
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column>
+                                            <template slot-scope="scope1">
+                                                <el-table :fit="true"
+                                                          :show-header="false"
+                                                          style="width: 100%;"
+                                                          :data="scope1.row.children">
+                                                    <el-table-column width="200" align="center">
+                                                        <template slot-scope="scope">
+                                                            {{scope.row.cName}}
+                                                            <br />
+                                                            {{scope.row.eName}}
+                                                        </template>
+                                                    </el-table-column>
+                                                    <el-table-column prop="material" width="300" align="center">
+                                                        <template slot-scope="scope">
+                                                            <el-row>
+                                                                <el-input size="small" placeholder="材质" type="textarea" v-model="scope.row.material" style="width: 100%;" />
+
+                                                            </el-row>
+                                                            <el-row>
+                                                                <el-input size="small" placeholder="Material" type="textarea" v-model="scope.row.eMaterial" style="width: 100%;" />
+
+                                                            </el-row>
+                                                        </template>
+                                                    </el-table-column>
+                                                    <el-table-column prop="surface" width="300" align="center">
+                                                        <template slot-scope="scope">
+                                                            <el-row>
+                                                                <el-input size="small" placeholder="表面处理" type="textarea" v-model="scope.row.surface" style="width: 100%;" />
+
+                                                            </el-row>
+                                                            <el-row>
+                                                                <el-input size="small" placeholder="Surface Treatment" type="textarea" v-model="scope.row.eSurface" style="width: 100%;" />
+
+                                                            </el-row>
+                                                        </template>
+                                                    </el-table-column>
+                                                    <el-table-column prop="remarks" align="center">
+                                                        <template slot-scope="scope">
+                                                            <el-row>
+                                                                <el-input size="small" placeholder="备注" type="textarea" v-model="scope.row.remarks" style="width: 100%;" />
+
+                                                            </el-row>
+                                                            <el-row>
+                                                                <el-input size="small" placeholder="Remarks" type="textarea" v-model="scope.row.eRemarks" style="width: 100%;" />
+                                                            </el-row>
+
+                                                        </template>
+                                                    </el-table-column>
+                                                </el-table>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </el-card>
+                                <el-card class="box-card" shadow="none" :key="menuKey2">
+                                    <span slot="header" class="step-jump pr" id="sku_config">
+                                        <i class="tip-tit"><i class="pr z-in2 pl10">配件配置详情Parts Configuration/Details</i></i>
+                                    </span>
+                                    <el-button size="mini" plain v-on:click="getFittingList()">添加配件</el-button>
+                                    <el-table empty-text=" " max-height="150"
+                                              style="width: 100%;margin-bottom:0px;" border class="gvq hide-empty mt20" size="mini">
+                                        <el-table-column label="组件名称 Unit" width="150"></el-table-column>
+                                        <el-table-column label="配件名称 Part" width="200" align="center"></el-table-column>
+                                        <el-table-column label="描述 Description" width="200"></el-table-column>
+                                        <el-table-column label="备注 Remarks" align="center"></el-table-column>
+                                    </el-table>
+                                    <el-table class="data-table detail-table" v-loading="listLoading" :data="currProduct.fittingChildren" :fit="true" border size="mini" :show-header="false" style="width: 100%;">
+                                        <el-table-column width="150">
+                                            <template slot-scope="scope">
+                                                {{scope.row.cName}}
+                                                <br />
+                                                {{scope.row.eName}}
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column>
+                                            <template slot-scope="scope1">
+                                                <el-table :fit="true"
+                                                          :show-header="false"
+                                                          class="detail-table"
+                                                          style="width: 100%;"
+                                                          :data="scope1.row.children">
+                                                    <el-table-column width="200" align="center">
+                                                        <template slot-scope="scope">
+                                                            {{scope.row.cName}}
+                                                            <br />
+                                                            {{scope.row.eName}}
+                                                            <br />
+                                                            <el-popover placement="right"
+                                                                        width="400"
+                                                                        v-model="scope.row.visible">
+                                                                <el-tree :data="gridData"
+                                                                         show-checkbox
+                                                                         default-expand-all
+                                                                         :default-checked-keys="gridChecked"
+                                                                         :ref="'gridTree'+scope.row.configId"
+                                                                         node-key="configDetailId"
+                                                                         highlight-current
+                                                                         class="newprolist mt10"
+                                                                         :props="newPartProps">
+                                                                    <span class="custom-tree-node" slot-scope="{ node, data }">
+                                                                        <span>{{ data.eName }} {{ data.cName }}</span>
+                                                                    </span>
+                                                                </el-tree>
+                                                                <el-button v-on:click="scope.row.visible=false;chooseDetail('gridTree'+scope.row.configId,scope1.$index,scope.$index)" :disabled="gridData.length<=0" size="mini" type="success" plain>选择</el-button>
+
+                                                                <el-button slot="reference" v-on:click="getDetailList(scope.row)" type="warning" icon="el-icon-edit" size="mini" plain>新增描述</el-button>
+                                                            </el-popover>
+                                                        </template>
+                                                    </el-table-column>
+                                                    <el-table-column align="center" style="padding-top:0;padding-bottom:0;">
+                                                        <template slot-scope="scope2">
+                                                            <el-table :fit="true"
+                                                                      :show-header="false"
+                                                                      style="width: 100%;"
+                                                                      :data="scope2.row.detailList" v-if="scope2.row.detailList.length>0">
+                                                                <el-table-column width="200">
+                                                                    <template slot-scope="scope3">
+                                                                        <el-popover placement="top-start"
+                                                                                    width="160"
+                                                                                    v-model="scope3.row.visible">
+                                                                            <p>确定删除该描述?</p>
+                                                                            <div class="tr mt10">
+                                                                                <el-button size="mini" type="warning" v-on:click="scope3.row.visible = false" plain>取消</el-button>
+                                                                                <el-button type="danger" size="mini" v-on:click="scope2.row.detailList.splice(scope3.$index , 1)" plain>确定</el-button>
+                                                                            </div>
+                                                                            <el-button slot="reference" type="danger" size="mini" icon="el-icon-delete" circle plain></el-button>
+                                                                        </el-popover>
+                                                                        {{scope3.row.cName}}
+                                                                        <br />
+                                                                        {{scope3.row.eName}}
+                                                                    </template>
+                                                                </el-table-column>
+                                                                <el-table-column prop="remarks" align="center">
+                                                                    <template slot-scope="scope3">
+                                                                        <el-row>
+                                                                            <el-input size="small" placeholder="备注" type="textarea" v-model="scope3.row.remarks" style="width: 100%;" />
+                                                                        </el-row>
+                                                                        <el-row>
+                                                                            <el-input size="small" placeholder="Remarks" type="textarea" v-model="scope3.row.eRemarks" style="width: 100%;" />
+                                                                        </el-row>
+                                                                    </template>
+                                                                </el-table-column>
+                                                            </el-table>
+                                                            <table v-else class="w100b" style="border:0;min-height:87px;">
+                                                                <tr>
+                                                                    <td width="199"></td>
+                                                                    <td>
+                                                                        <div class="cell"><el-input type="textarea" v-model="scope2.row.remarks" /></div>
+                                                                        <div class="cell"><el-input type="textarea" v-model="scope2.row.eRemarks" /></div>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+
+                                                        </template>
+                                                    </el-table-column>
+                                                </el-table>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </el-card>
+                            </el-tab-pane>
+
+                            <el-tab-pane label="产品卖点" name="third">
+                                <el-card class="box-card" shadow="hover">
+                                    <span slot="header" class="step-jump pr" id="sku_point">
+                                        <i class="tip-tit"><i class="pr z-in2 pl10">产品卖点 Bullet Point</i></i>
+                                    </span>
+                                    <el-form-item label="中文描述" label-width="auto" prop="bulletPoint">
+                                        <textarea id="editor1" name="editor1" v-model.trim="currProduct.bulletPoint"></textarea>
+                                    </el-form-item>
+                                    <el-form-item label="英文描述" label-width="auto" prop="eBulletPoint">
+                                        <textarea id="editor2" name="editor2" v-model.trim="currProduct.eBulletPoint"></textarea>
+                                    </el-form-item>
+                                </el-card>
+                            </el-tab-pane>
+                            <el-tab-pane label="附件" name="fourth">
+                                <el-card class="box-card" shadow="hover">
+                                    <span slot="header" class="step-jump pr" id="sku_attachment">
+                                        <i class="tip-tit"><i class="pr z-in2 pl10">附件 Attachment</i></i>
+                                    </span>
+                                    <el-form-item label="Picture(产品示意图) (320*320)" prop="imageMain">
+                                        <div class="m-t-10 avatar-uploader" v-on:click="openFileManage()">
+                                            <div class="el-upload el-upload--text">
+                                                <img v-if="mainSrc" :src="mainSrc" class="avatar">
+                                                <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                                            </div>
+                                        </div>
+                                    </el-form-item>
+                                    <div class="pt20"></div>
+                                    <el-form-item label="附件管理" prop="feature">
+                                        @*<el-button type="primary" v-on:click="openFileManage">附件管理</el-button>*@
+                                        <el-button type="primary" v-on:click="openAttachment">附件管理</el-button>
+                                    </el-form-item>
+                                </el-card>
+                            </el-tab-pane>
+                            <el-tab-pane label="Sku列表" name="fifth">
+                                <el-button type="success" size="small" plain v-on:click="getSkuList" v-loading="loading" style="margin-bottom:10px;">刷 新</el-button>
+
+                                <el-table class="data-table" size="small" v-loading="listLoading" :data="skuList" :fit="true" border>
+                                    <el-table-column type="index"
+                                                     width="50">
+                                    </el-table-column>
+                                    <el-table-column min-width="40" prop="id" label="ID">
+                                        <template slot-scope="scope">
+                                            <i>{{scope.row.id}}</i>
+                                        </template>
+                                    </el-table-column>
+                                    @* <el-table-column min-width="200" prop="fullEName" label="产品名">
+                                            <template slot-scope="scope">
+                                                <!--鼠标滑过，显示图片-->
+                                                <el-popover placement="right"
+                                                            trigger="hover">
+                                                    <img :src="scope.row.primaryImageSrcFull" class="pimg" alt="no image" v-if="scope.row.primaryImageSrcFull!=''" width="320">
+                                                    <i slot="reference">{{scope.row.fullEName}}</i>
+                                                </el-popover>
+                                            </template>
+                                        </el-table-column>*@
+                                    <el-table-column min-width="200" prop="fullEName" label="产品名">
+                                        <template slot-scope="scope1">
+                                            <el-link type="warning" v-on:click="detail(scope1.row.id)">{{scope1.row.fullEName}}</el-link>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column width="120" label="图片" align="center">
+                                        <template slot-scope="scope1">
+                                            <img v-if="scope1.row.primaryImageSrcFull" class="pimg" alt="no image" :src="scope1.row.primaryImageSrcFull" height="50">
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="status" label="状态" min-width="80">
+                                        <template slot-scope="scope">
+                                            <el-tag size="small" v-if="scope.row.status == 0">暂存</el-tag>
+                                            <el-tag size="small" v-if="scope.row.status == 1" type="info">待审核</el-tag>
+                                            <el-tag size="small" v-if="scope.row.status == 2" type="danger">审核不通过</el-tag>
+                                            <el-tag size="small" v-if="scope.row.status == 3" type="success">正常</el-tag>
+                                            <el-tag size="small" v-if="scope.row.status == 7" type="info">冻结</el-tag>
+                                            <el-tag size="small" v-if="scope.row.status == 8" type="info">淘汰</el-tag>
+                                            <el-tag size="small" v-if="scope.row.status == 9" type="info">异常</el-tag>
+                                        </template>
+                                    </el-table-column>
+                                    @*<el-table-column min-width="90" prop="Category.name" label="分类">
+                                            <template slot-scope="scope">
+                                                <i v-if="scope.row.category!=null">{{scope.row.category.eName}}</i>
+                                            </template>
+                                        </el-table-column>*@
+                                    <el-table-column min-width="90" prop="funcCategory.name" label="分类">
+                                        <template slot-scope="scope">
+                                            <i v-if="scope.row.funcCategory!=null">{{scope.row.funcCategory.eName}}</i>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column min-width="80" prop="factoryModel" label="工厂型号">
+                                        <template slot-scope="scope">
+                                            <i>{{scope.row.factoryModel}}</i>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column width="150" prop="editTime" label="上次修改时间">
+                                        <template slot-scope="scope">
+                                            <i>{{scope.row.modifyTimeString}}</i>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column min-width="60" prop="createUser" label="创建人">
+                                        <template slot-scope="scope">
+                                            <i>{{scope.row.createUser}}</i>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column width="230" label="操作">
+                                        <template slot-scope="scope">
+                                            @*<el-button type="success" plain size="mini" class="mb5 ml10" v-on:click="updateSku(scope.row)">同步更新</el-button>*@
+                                            <el-button type="success" size="mini" plain class="waves-effect mb5" v-on:click="createSkuCost(0, scope.row.id)">
+                                                创建RGC在售产品
+                                            </el-button>
+                                            <el-dropdown trigger="click" size="small">
+                                                <el-button type="warning" plain size="mini" class="mb5 ml10">
+                                                    状态维护
+                                                    <i class="el-icon-caret-bottom el-icon--right"></i>
+                                                </el-button>
+                                                <el-dropdown-menu slot="dropdown">
+                                                    <el-dropdown-item>
+                                                        <div v-on:click="update_status(scope.$index, scope.row.id, 3)">审核通过</div>
+                                                    </el-dropdown-item>
+                                                    <el-dropdown-item>
+                                                        <div v-on:click="update_status(scope.$index, scope.row.id, 2)">审核不通过</div>
+                                                    </el-dropdown-item>
+                                                    <el-dropdown-item>
+                                                        <div v-on:click="update_status(scope.$index, scope.row.id, 7)">冻结</div>
+                                                    </el-dropdown-item>
+                                                    <el-dropdown-item>
+                                                        <div v-on:click="update_status(scope.$index, scope.row.id, 8)">淘汰</div>
+                                                    </el-dropdown-item>
+                                                </el-dropdown-menu>
+                                            </el-dropdown>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                                <el-col :span="24" class="toolbar">
+                                    <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="page" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+                                    </el-pagination>
+                                </el-col>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </el-form>
+                    <el-dialog title="部件添加" :visible.sync="partVisable" :close-on-click-modal="false">
+                        <el-button size="small" type="primary" class="waves-effect mr10" v-on:click="chooseParts()">
+                            确定
+                        </el-button>
+                        选择部件
+                        <el-tree :data="newPartList"
+                                 show-checkbox
+                                 default-expand-all
+                                 :default-checked-keys="newPartChecked"
+                                 ref="newPartTree"
+                                 node-key="id"
+                                 highlight-current
+                                 class="newprolist mt10"
+                                 :props="newPartProps"
+                                 v-loading="bujianloading">
+                            <span class="custom-tree-node" slot-scope="{ node, data }">
+                                <span>{{ data.eName }} {{ data.cName }}</span>
+                            </span>
+                        </el-tree>
+                    </el-dialog>
+
+                    <el-dialog title="配件添加" :visible.sync="fittingVisable" :close-on-click-modal="false">
+
+                        <el-button type="primary" size="small" class="waves-effect mr10" v-on:click="chooseFitting()">
+                            确定
+                        </el-button>
+                        选择配件
+                        <el-tree :data="newFittingList"
+                                 show-checkbox
+                                 default-expand-all
+                                 :default-checked-keys="newFittingChecked"
+                                 ref="newFittingTree"
+                                 node-key="id"
+                                 highlight-current
+                                 class="newprolist mt10"
+                                 :props="newFittingProps"
+                                 v-loading="peijianloading">
+                            <span class="custom-tree-node" slot-scope="{ node, data }">
+                                <span>{{ data.eName }} {{ data.cName }}</span>
+                            </span>
+                        </el-tree>
+
+
+
+                    </el-dialog>
+                    <el-dialog title="子键添加" :visible.sync="configChildVisable" :close-on-click-modal="false">
+                        <el-button type="success" size="small" class="waves-effect" v-on:click="batchAddChild()">
+                            批量添加
+                        </el-button>
+                        <el-table class="data-table" v-loading="listLoading" ref="partsMultipleTable"
+                                  :data="ChildData" :fit="true" border v-on:selection-change="handleSelectionChange" top="5%" width="100%">
+                            <el-table-column type="selection"
+                                             width="55">
+                            </el-table-column>
+                            <el-table-column min-width="50" prop="id" label="ID">
+                            </el-table-column>
+                            <el-table-column min-width="50" prop="cName" label="中文名">
+                            </el-table-column>
+                            <el-table-column min-width="80" prop="eName" label="英文名">
+                            </el-table-column>
+                            <el-table-column width="100" label="操作">
+                                <template slot-scope="scope">
+                                    <el-button type="primary" plain size="small" class="waves-effect" v-on:click="addChild(scope.$index)">
+                                        添加
+                                    </el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <el-col :span="24">
+                            <el-pagination layout="prev, pager, next" small :page-size="pageSize" :total="total" :current-page="page" style="float:right;" v-on:current-change="handleCurrentChange"></el-pagination>
+                        </el-col>
+                    </el-dialog>
+                    <el-dialog title="附件 Attachment" :visible.sync="fileManageVisable" :close-on-click-modal="false" top="5%" width="1000px">
+                        工厂型号 : {{currProduct.factoryModel}}
+                        <div ref="elfinder" id="elfinder"></div>
+                        <span slot="footer" class="dialog- footer" style="display:block;text-align: center;margin-top: 20px">
+                            <el-button type="primary" v-on:click="saveMainUrl">设为预览图</el-button>
+                        </span>
+                    </el-dialog>
+                </div>
+            </article>
+        </template>
+    </div>
+    <script src="/lib/elFinder/lib/jquery-ui/jquery-ui.min.js"></script>
+    <script src="/lib/elFinder/lib/elfinder/js/elfinder.full.js"></script>
+    <script src="/lib/elFinder/lib/elfinder/js/i18n/elfinder.zh_CN.js"></script>
+    <script type="text/javascript" src="/lib/ckeditor/ckeditor.js"></script>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    menuKey1: 1,
+                    menuKey2: 2,
+                    listLoading: false,
+                    bujianloading:false,
+                    peijianloading:false,
+                    skuList: [],
+                    partChildren: [],
+                    fittingChildren: [],
+                    nextPartVisable: false,
+                    nextFittingVisable: false,
+                    partVisable: false,
+                    fittingVisable: false,
+                    newPartList: [],
+                    newPartPackageList: [],
+                    newFittingList: [],
+                    newFittingPackageList: [],
+                    ComponentList: [],
+                    newPartProps: {
+                        children: 'children',
+                        label: 'eName'
+                    },
+                    newPartPackageProps: {
+                        children: 'child',
+                        label: 'eName'
+                    },
+                    newFittingProps: {
+                        children: 'children',
+                        label: 'eName'
+                    },
+                    newFittingPackageProps: {
+                        children: 'child',
+                        label: 'eName'
+                    },
+                    newPartChecked: [],
+                    newPartPackageChecked: [],
+                    newFittingChecked: [],
+                    newFittingPackageChecked: [],
+                    PartChildren: [],
+                    FittingChildren: [],
+                    defaultChecked: [1],
+                    configData: [],
+                    configChildData: [],
+                    ChildData: [],
+                    configVisable: false,
+                    configChildVisable: false,
+                    previewSrc: '',
+                    mainSrc: '',
+                    selectedFile: '',
+                    selectedFilePath: '',
+                    selectedFileByte: '',
+                    fileManageVisable: false,
+                    active: 0,
+                    cascader: [],
+                    // 添加自定义配置
+                    dialogAdd: {
+                        isShow: false,
+                        label: void 0,
+                        chineseLabel: void 0,
+                        value: void 0,
+                    },
+                    descEditor: '',
+                    descEditor2: '',
+                    featureEditor: '',
+                    activeName: 'first',
+                    loading: false,
+                    dialogVisible: this.visible,
+                    currProduct: {
+                        packageList: [
+
+                        ],
+                        partsList: [
+
+                        ],
+                        partChildren: [],
+                        fittingChildren: [],
+                        status: 0,
+                        cName: void 0,
+                        fullCName: void 0,
+                        eName: void 0,
+                        fullEName: void 0,
+                        factoryModel: void 0,
+                        remarks: void 0,
+                        funcCategoryId: 0,
+                        funcCategory: {
+                            code: 0,
+                            eName: void 0,
+                            cName: void 0,
+                            parentId: 0,
+                            src: void 0,
+                            srcFull: void 0,
+                            showOrder: 0,
+                            isShow: true,
+                            byteStr: void 0,
+                            id: 0,
+                        },
+                        funcCategoryIdPath: void 0,
+                        funcCategoryIds: [
+                            0
+                        ],
+                        primaryImageSrc: void 0,
+                        imageMain: void 0,
+                        sku: void 0,
+                        upc: void 0,
+                        seriesNo: void 0,
+                        productSize: void 0,
+                        packingSize: void 0,
+                        packingConfig: void 0,
+                        productSizeLength: 0,
+                        productSizeWidth: 0,
+                        productSizeHeight: 0,
+                        packingSizeLength: 0,
+                        packingSizeWidth: 0,
+                        packingSizeHeight: 0,
+                        netWeight: void 0,
+                        grossWeight: void 0,
+                        certification: void 0,
+                        qtyPallet: 0,
+                        loadingQty_40HQ: void 0,
+                        id: 0,
+                        bulletPoint: void 0,
+                        eBulletPoint: void 0,
+                    },
+                    title: '',
+                    skuList: [],
+                    skuListVisable: false,
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0,
+                        type: void 0,
+                        status: void 0
+                    },
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+                    Configuration: [
+                    ],
+                    no: 0,
+                    multipleSelection: [],
+                    multipleSelection2: [],
+                    Custom: [],
+                    packageId: 0,
+                    gridData: [],
+                    gridChecked: [],
+                    visible: false,
+                }
+            },
+            created() {
+                this.getCategoryCasCader();
+                this.getPoduct();
+                //this.getSkuList();
+            },
+            activated() {
+                this.partsTreeGetChecked();
+                this.fittingTreeGetChecked();
+                this.chooseParts();
+                this.chooseFitting();
+            },
+            methods: {
+                tabClick(event) {
+                    if (event.$el.id == "pane-second") {
+                        ++this.menuKey1;
+                        ++this.menuKey2;
+                    }
+                },
+                getTreeData(data) {
+                    // 循环遍历json数据
+                    for (var i = 0; i < data.length; i++) {
+
+                        if (data[i].children.length < 1) {
+                            // children若为空数组，则将children设为undefined
+                            data[i].children = undefined;
+                        } else {
+                            // children若不为空数组，则继续 递归调用 本方法
+                            this.getTreeData(data[i].children);
+                        }
+                    }
+                    return data;
+                },
+                createSkuCost(skuCostId,skuId) {
+                    window.parent.MainIndex.addTabByIframe("添加RGC在售产品_" + skuCostId, "/Sku/SkuCostDetail?&skuCostId=" + skuCostId +"&skuId=" + skuId, "添加RGC在售产品");
+                },
+                detail(id) {
+                    window.parent.MainIndex.addTabByIframe("Sku详情_" + id, "/Sku/Detail?id=" + id, "Sku详情");
+                    //window.open("/Sku/SkuDetail?id=" + id);
+                },
+                update_status(index, id, status) {
+                    var _self = this;
+                    this.$confirm("确定修改状态吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '/rest/sku/status/update',
+                            data: { id: id, status: status },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.skuList[index].status = status;
+                                    _self.$notify.success({
+                                        title: '成功',
+                                        message: "更新状态成功"
+                                    });
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                },
+                getSkuList() {
+                    var productId = @ViewBag.productId;
+                    this.listLoading = true;
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/product/sku/list',
+                        data: { key: _self.filters.searchKey, productId: productId, pageSize: _self.pageSize, currentPage: _self.page },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.data.page.totalCount;
+                                _self.skuList = data.data.list;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete(){
+                            _self.listLoading = false;
+                        }
+                    });
+                },
+                chooseDetail(refName, index1, index2) {
+                    var _self = this
+                    console.log(refName + "-" + index1 + "-" + index2)
+                    //_self.gridChecked = this.$refs.gridTree.getCheckedKeys()
+                    //_self.gridChecked = this.$refs[refName].files[0].getCheckedKeys()
+                    _self.gridChecked = this.$refs[refName].getCheckedKeys()
+
+                    for (let key in _self.gridData) {
+                        if (_self.gridChecked.indexOf(_self.gridData[key].configDetailId) > -1) {
+                            var i = 0
+                            for (let item in _self.currProduct.fittingChildren[index1].children[index2].detailList) {
+                                if (_self.currProduct.fittingChildren[index1].children[index2].detailList[item].configDetailId == _self.gridData[key].configDetailId) {
+                                    i++;
+                                }
+                            }
+                            console.log(i)
+                            if (i == 0) {
+                                _self.currProduct.fittingChildren[index1].children[index2].detailList.push(Object.assign({}, _self.gridData[key]))
+                                //this.$set(this.rfidInfo,row.$index,this.rfidInfo[row.$index]);重新渲染数据
+                            }
+                        }
+                    }
+                     _self.currProduct.fittingChildren[index1].children[index2].detailList = _self.currProduct.fittingChildren[index1].children[index2].detailList.filter(key => _self.gridChecked.includes(key.configDetailId))
+
+                },
+                getDetailList(row) {
+                    var _self = this;
+                    _self.gridChecked = []
+                    for (let key in row.detailList) {
+                        _self.gridChecked.push(row.detailList[key].configDetailId)
+                    }
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/product/fitting/detail',
+                        data: { id: row.configId },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.gridData = data.data
+
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                fetchPartsData(type, ids) {
+                    var $this = this
+                    var data = {
+                        type: type,
+                        partChildren: [],
+                        fittingChildren: [],
+                        componentIdList: [],
+                    }
+                    data.partChildren = this.currProduct.partChildren
+                    data.fittingChildren = this.currProduct.fittingChildren
+                    data.componentIdList = ids
+                    $.ajax({
+                        type: 'Post',
+                        url: '/rest/product/parts/edit',
+                         dataType: 'json',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function (data) {
+                            if (data.success == true) {
+                                if (type == 2) {
+                                    $this.currProduct.partChildren = []
+
+                                    $this.currProduct.partChildren = data.data.partChildren
+                                } else if (type == 3) {
+                                    $this.currProduct.fittingChildren = []
+
+                                    $this.currProduct.fittingChildren = data.data.fittingChildren
+                                }
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                getPartsList() {
+                    var $this = this;
+                    $this.partVisable = true;
+                    $this.nextPartVisable = false;
+                    $this.bujianloading = true;
+                    $.ajax({
+                        type: 'Get',
+                        url: '/rest/product/parts/list',
+                        success: function (data) {
+                            if (data.success == true) {
+                                $this.newPartList = data.data
+                                $this.partsTreeGetChecked()
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete(){
+                            $this.bujianloading = false;
+                        }
+                    });
+                },
+                getFittingList() {
+                    var $this = this;
+                    $this.fittingVisable = true;
+                    $this.nextFittingVisable = false;
+                    $this.peijianloading = true;
+                    $.ajax({
+                        type: 'Get',
+                        url: '/rest/product/fitting/list',
+                        success: function (data) {
+                            if (data.success == true) {
+                                $this.newFittingList = data.data
+                                $this.fittingTreeGetChecked()
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete(){
+                            $this.peijianloading = false;
+                        }
+                    });
+                },
+                partsTreeGetChecked() {
+                    for (let parent of this.currProduct.partChildren) {
+                        //父级选中
+                        if (parent.children.length > 0) {
+                            //子级选中
+                            for (let child of parent.children) {
+                                this.newPartChecked.push(child.configId)
+                            }
+                        } else {
+                            this.newPartChecked.push(parent.id)
+
+                        }
+                    }
+
+                },
+                fittingTreeGetChecked() {
+                    for (let parent of this.currProduct.fittingChildren) {
+                        //父级选中
+                        if (parent.children.length > 0) {
+                            //子级选中
+                            for (let child of parent.children) {
+                                this.newFittingChecked.push(child.configId)
+                            }
+                        } else {
+                            this.newFittingChecked.push(parent.id)
+
+                        }
+                    }
+
+                },
+                chooseParts() {
+                    this.newPartChecked = this.$refs.newPartTree.getCheckedKeys()
+                    this.fetchPartsData(2, this.newPartChecked)
+                    this.partVisable = false
+                },
+
+                chooseFitting() {
+                    this.newFittingChecked = this.$refs.newFittingTree.getCheckedKeys()
+                    this.fetchPartsData(3, this.newFittingChecked)
+                    this.fittingVisable = false
+
+                },
+                deletePackage(index) {
+                    this.Configuration.splice(index, 1);
+                    for (var key in this.Configuration) {
+                        this.Configuration[key].index = key;
+                    }
+                },
+                addProperty() {
+                    this.Custom.push(
+                        {
+                            cName: '',
+                            eName: '',
+                            value: '',
+                            seqNo: 0,
+                            skuId: 0,
+                            id: 0,
+                        }
+                    )
+                },
+                getPoduct() {
+                    var productId = @ViewBag.productId;
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/product/get',
+                        data: { id: productId },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.currProduct = data.data;
+                                //document.getElementById("mainSrc").src = data.data.primaryImageSrcFull;
+                                _self.mainSrc = data.data.primaryImageSrcFull;
+                                _self.Configuration = [];
+
+                                _self.Custom = []
+                                _self.Custom = data.data.customList
+
+                                if (_self.currProduct.productSize != null) {
+                                    var arrProduct = _self.currProduct.productSize.split("x");
+                                    if (arrProduct.length > 0) {
+                                        _self.currProduct.productSizeLength = arrProduct[0];
+                                        _self.currProduct.productSizeWidth = arrProduct[1];
+                                        _self.currProduct.productSizeHeight = arrProduct[2];
+                                    } else {
+                                        _self.currProduct.productSizeLength = 0;
+                                        _self.currProduct.productSizeWidth = 0;
+                                        _self.currProduct.productSizeHeight = 0;
+                                    }
+                                } else {
+                                    _self.currProduct.productSizeLength = 0;
+                                    _self.currProduct.productSizeWidth = 0;
+                                    _self.currProduct.productSizeHeight = 0;
+                                }
+                                if (_self.currProduct.packingSize != null) {
+                                    var arrPacking = _self.currProduct.packingSize.split("x");
+                                    if (arrPacking.length > 0) {
+                                        _self.currProduct.packingSizeLength = arrPacking[0];
+                                        _self.currProduct.packingSizeWidth = arrPacking[1];
+                                        _self.currProduct.packingSizeHeight = arrPacking[2];
+                                    } else {
+                                        _self.currProduct.packingSizeLength = 0;
+                                        _self.currProduct.packingSizeWidth = 0;
+                                        _self.currProduct.packingSizeHeight = 0;
+                                    }
+                                } else {
+                                    _self.currProduct.packingSizeLength = 0;
+                                    _self.currProduct.packingSizeWidth = 0;
+                                    _self.currProduct.packingSizeHeight = 0;
+                                }
+
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                            _self.descEditor.setData(data.data.bulletPoint);
+                            _self.descEditor2.setData(data.data.eBulletPoint);
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                save() {
+                    var _valid = false;
+                    var _self = this;
+                    var productId = @ViewBag.productId;
+
+                    _self.currProduct.productId = productId;
+                    _self.currProduct.id = 0;
+                    _self.currProduct.packageList = [];
+                    _self.currProduct.partsList = [];
+                    _self.currProduct.customList = [];
+                    //for (var key in this.Custom) {
+                    //    this.Custom[key].id = 0;
+                    //    _self.currProduct.customList.push(this.Custom[key]);
+                    //}
+                    for (var key in this.Configuration) {
+                        this.Configuration[key].id = 0;
+                        _self.currProduct.packageList.push(this.Configuration[key]);
+                    }
+
+                    for (var key in this.Configuration) {
+                        for (var key1 in this.Configuration[key].child) {
+                            this.Configuration[key].child[key1].id = 0;
+                            _self.currProduct.partsList.push(this.Configuration[key].child[key1]);
+                        }
+                    }
+                    _self.currProduct.customList = _self.Custom
+                    //console.log(_self.currProduct)
+                    //return;
+                    this.$refs['currProduct'].validate((valid) => {
+                        if (valid) {
+                            _valid = true;
+
+                        }
+                    });
+                    if (!_valid) {
+                        return false;
+                    }
+                    if (_self.currProduct.primaryImageSrc == "" || _self.currProduct.primaryImageSrc == undefined) {
+                        if (_self.currProduct.imageMain == undefined || _self.currProduct.imageMain == "") {
+                            _self.$message({
+                                type: 'error',
+                                message: '请上传预览图'
+                            });
+                            return false;
+                        }
+                    }
+                    _self.currProduct.bulletPoint = CKEDITOR.instances.editor1.getData();
+                    _self.currProduct.eBulletPoint = CKEDITOR.instances.editor2.getData();
+                    _self.currProduct.productSize = _self.currProduct.productSizeLength + 'x' + _self.currProduct.productSizeWidth + 'x' + _self.currProduct.productSizeHeight;
+                    _self.currProduct.packingSize = _self.currProduct.packingSizeLength + 'x' + _self.currProduct.packingSizeWidth + 'x' + _self.currProduct.packingSizeHeight;
+                    _self.loading = true
+                    try {
+                        $.ajax({
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            url: '/rest/sku/create',
+                            data: JSON.stringify(_self.currProduct),
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.$notify({
+                                        title: '成功',
+                                        message: '创建sku成功！',
+                                        type: 'success'
+                                    });
+                                    _self.clear();
+                                    _self.fetchData();
+                                }
+                                else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            },
+                            complete(){
+                                _self.loading = false;
+                            }
+                        });
+                    }
+                    catch (e) {
+                        _self.loading = false;
+                        _self.$message({
+                            type: 'error',
+                            message: e
+                        });
+                    }
+                },
+                update(isSync) {
+                    var _self = this;
+                    var _valid = false;
+                    this.$refs['currProduct'].validate((valid) => {
+                        if (valid) {
+                            _valid = true;
+                        }
+                    });
+                    if (!_valid) {
+                        return false;
+                    }
+                    if (_self.currProduct.primaryImageSrc == "" || _self.currProduct.primaryImageSrc == undefined) {
+                        if (_self.currProduct.imageMain == undefined || _self.currProduct.imageMain == "") {
+                            _self.$message({
+                                type: 'error',
+                                message: '请上传预览图'
+                            });
+                            return false;
+                        }
+                    }
+                    _self.currProduct.packageList = [];
+                    _self.currProduct.packageChildren = [];
+                    _self.currProduct.partsChildren = [];
+                    _self.currProduct.partsList = [];
+                    _self.currProduct.customList = [];
+                    for (var key in this.Custom) {
+                        this.Custom[key].id = 0;
+                        _self.currProduct.customList.push(this.Custom[key]);
+                    }
+
+                    for (var key in this.Configuration) {
+                        _self.currProduct.packageList.push(this.Configuration[key]);
+                    }
+
+                    for (var key in this.Configuration) {
+                        for (var key1 in this.Configuration[key].child) {
+                            _self.currProduct.partsList.push(this.Configuration[key].child[key1]);
+                        }
+                    }
+                    _self.currProduct.bulletPoint = _self.descEditor.getData();
+                    _self.currProduct.eBulletPoint = _self.descEditor2.getData();
+                    _self.currProduct.productSize = _self.currProduct.productSizeLength + 'x' + _self.currProduct.productSizeWidth + 'x' + _self.currProduct.productSizeHeight;
+                    _self.currProduct.packingSize = _self.currProduct.packingSizeLength + 'x' + _self.currProduct.packingSizeWidth + 'x' + _self.currProduct.packingSizeHeight;
+                    var newFlowData = {};
+                    newFlowData["productId"] = _self.currProduct.id;
+                    _self.infoSubmitLoading = true;
+                    for (var key in _self.currProduct) {
+                        if (_self.currProduct[key] != "" && _self.currProduct[key] != null) {
+                            newFlowData[key] = _self.currProduct[key];
+                        }
+
+                    };
+                    _self.currProduct.isSync = isSync;
+                    //return;
+                    _self.loading = true
+                    try {
+                        $.ajax({
+                            type: 'POST',
+                            url: '/rest/product/update',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            data: JSON.stringify(_self.currProduct),
+                            success: function (data) {
+                                if (data.success == true) {
+                                    if (data.success == true) {
+                                        _self.$notify({
+                                            title: '成功',
+                                            message: '更新产品成功！',
+                                            type: 'success'
+                                        });
+                                        _self.getPoduct();
+                                    }
+                                }
+                                else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            },
+                            complete(){
+                                _self.loading = false;
+                            }
+                        });
+                    }
+                    catch (e) {
+                        _self.loading = false;
+                        _self.$message({
+                            type: 'error',
+                            message: e
+                        });
+                    }
+                },
+                updateSku() {
+
+                    var _self = this;
+
+                    var _valid = false;
+                    this.$refs['currProduct'].validate((valid) => {
+                        if (valid) {
+                            _valid = true;
+                        }
+                    });
+                    if (!_valid) {
+                        return false;
+                    }
+                    if (_self.currProduct.primaryImageSrc == "" || _self.currProduct.primaryImageSrc == undefined) {
+                        if (_self.currProduct.imageMain == undefined || _self.currProduct.imageMain == "") {
+                            _self.$message({
+                                type: 'error',
+                                message: '请上传预览图'
+                            });
+                            return false;
+                        }
+                    }
+                    _self.currProduct.packageList = [];
+                    _self.currProduct.partsList = [];
+                    _self.currProduct.customList = [];
+                    for (var key in this.Custom) {
+                        this.Custom[key].id = 0;
+                        _self.currProduct.customList.push(this.Custom[key]);
+                    }
+
+                    for (var key in this.Configuration) {
+                        this.Configuration[key].id = 0;
+                        _self.currProduct.packageList.push(this.Configuration[key]);
+                    }
+
+                    for (var key in this.Configuration) {
+                        this.Configuration[key].id = 0;
+                        for (var key1 in this.Configuration[key].child) {
+                            this.Configuration[key].child[key1].id=0
+                            _self.currProduct.partsList.push(this.Configuration[key].child[key1]);
+                        }
+                    }
+                    _self.currProduct.bulletPoint = _self.descEditor.getData();
+                    _self.currProduct.eBulletPoint = _self.descEditor2.getData();
+                    _self.currProduct.productSize = _self.currProduct.productSizeLength + 'x' + _self.currProduct.productSizeWidth + 'x' + _self.currProduct.productSizeHeight;
+                    _self.currProduct.packingSize = _self.currProduct.packingSizeLength + 'x' + _self.currProduct.packingSizeWidth + 'x' + _self.currProduct.packingSizeHeight;
+                   // _self.currProduct.id = id;
+
+                    //return;
+                    _self.loading = true
+                    try {
+
+                        $.ajax({
+                            type: 'POST',
+                            url: '/rest/sku/sync/update/sku/cost',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            data: JSON.stringify(_self.currProduct),
+                            success: function (data) {
+                                if (data.success == true) {
+                                    if (data.success == true) {
+                                        _self.$notify({
+                                            title: '成功',
+                                            message: '更新Sku成功！',
+                                            type: 'success'
+                                        });
+                                        //_self.getPoduct();
+                                    }
+                                }
+                                else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            },
+                            complete(){
+                                _self.loading = false;
+                            }
+                        });
+                    }
+                    catch (e) {
+                        _self.loading = false;
+                        _self.$message({
+                            type: 'error',
+                            message: e
+                        });
+                    }
+                },
+                operation(isSync){
+                    if (this.total == 0) {
+                        this.$confirm("查询无Sku是否需要创建Sku", '提示', {
+                            type: 'warning'
+                        }).then(() => {
+                            this.update(isSync);
+                            this.save();
+                        }).catch(() => {
+                            this.update(isSync);
+                        });
+                    } else {
+                        //this.$confirm("是否同步到在售产品信息", '提示', {
+                        //    type: 'warning'
+                        //}).then(() => {
+                        //    this.update();
+                        //    this.updateSku();
+
+                        //}).catch(() => {
+                            this.update(isSync);
+                        //});
+                    }
+                },
+                getAllPackage() {
+                    var $this = this;
+                    $.ajax({
+                        type: 'Get',
+                        url: '/rest/product/package',
+                        success: function (data) {
+                            if (data.success == true) {
+                                $this.configData = data.data;
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                getParts(configId) {
+                    var $this = this;
+                    $.ajax({
+                        type: 'Get',
+                        url: '/rest/product/parts',
+                        data: { packageId: configId, pageSize: this.pageSize, currentPage: this.page },
+                        success: function (data) {
+                            if (data.success == true) {
+                                $this.ChildData = data.data.list;
+                                $this.total = data.data.page.totalCount;
+                                $this.page = data.data.page.currentPage;
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getParts(this.packageId);
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getParts(this.packageId);
+                },
+                handleSelectionChange(val) {
+                    this.multipleSelection = val;
+                },
+                handleSelectionChange2(val) {
+                    this.multipleSelection2 = val;
+                },
+                openConfig() {
+                    this.defaultChecked = [];
+                    this.configVisable = true;
+                    this.getAllPackage();
+                },
+                openProperty(configId, index) {
+                    this.page = 1;
+                    this.no = index;
+                    this.configChildVisable = true;
+                    this.getParts(configId);
+                    this.packageId = configId;
+                },
+                openAttachment() {
+                    window.parent.MainIndex.addTabByIframe("附件管理", "/sku/Attachment", "附件管理");
+                },
+                openFileManage() {
+                    this.fileManageVisable = true;
+                    //selectedFilePath = '';
+                    setTimeout(() => {
+                        this.fileManageInitial();
+                    }, 0)
+                },
+                saveMainUrl() {
+                    //console.log(this.mainSrc);
+                    if (selectedFilePath != undefined && selectedFilePath != "") {
+                        this.currProduct.imageMain = selectedFilePath;
+                        //document.getElementById("mainSrc").src = mainSrc;
+                        this.mainSrc = previewSrc;
+                        this.fileManageVisable = false;
+                    } else {
+                        this.$message({
+                            type: 'error',
+                            message: '请选择图片'
+                        });
+                    }
+                },
+                fileManageInitial() {
+                    var _self = this;
+                    var myCommands = elFinder.prototype._options.commands;
+                    var disabled = ['callback', 'chmod', 'editor', 'netmount', 'ping', 'search', 'zipdl', 'help']; // Not yet implemented commands in elFinder.NetCore
+                    elFinder.prototype.i18.en.messages.TextArea = "Edit";
+
+                    $.each(disabled, function (i, cmd) {
+                        (idx = $.inArray(cmd, myCommands)) !== -1 && myCommands.splice(idx, 1);
+                    });
+
+                    var options = {
+                        url: '/product/connector', // Default (Local File System)
+                    @*//customData: { folder: '@Model.Folder', subFolder: '@Model.SubFolder' }, // customData passed in every request to the connector as query strings. These values are used in FileController's Index method.*@
+                        rememberLastDir: false, // Prevent elFinder saving in the Browser LocalStorage the last visited directory
+                            commands: myCommands,
+                                lang: 'zh_CN', // elFinder supports UI and messages localization. Check the folder Content\elfinder\js\i18n for all available languages. Be sure to include the corresponding .js file(s) in the JavaScript bundle.
+                                    uiOptions: { // UI buttons available to the user
+                        toolbar: [
+                            ['back', 'forward'],
+                            ['reload'],
+                            ['home', 'up'],
+                            ['mkdir', 'mkfile', 'upload'],
+                            ['open', 'download'],
+                            ['undo', 'redo'],
+                            ['info'],
+                            ['quicklook'],
+                            ['copy', 'cut', 'paste'],
+                            ['rm'],
+                            ['duplicate', 'rename', 'edit'],
+                            ['selectall', 'selectnone', 'selectinvert'],
+                            ['view', 'sort']
+                        ]
+
+                    }, handlers: {
+                        select: function (event, elfinderInstance) {
+                            if (event.data.selected.length == 1) {
+                                var item = $('#' + event.data.selected[0]);
+                                if (!item.hasClass('directory')) {
+                                    selectedFile = event.data.selected[0];
+                                    previewSrc = "/product/connector?cmd=file&target=" + selectedFile + "&_t=" + event.timeStamp;
+
+                                    $.ajax({
+                                        type: 'post',
+                                        url: '/product/selectFile',
+                                        data: { target: selectedFile },
+                                        success: function (data) {
+                                            selectedFilePath = data;
+                                        },
+                                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                            if (errorThrown == "Unauthorized") {
+                                                window.parent.MainIndex.openLoginFrom();
+                                                _self.$message({
+                                                    type: 'error',
+                                                    message: XMLHttpRequest.responseJSON.msg
+                                                });
+                                            } else {
+                                                _self.$message({
+                                                    type: 'error',
+                                                    message: errorThrown
+                                                });
+                                            }
+                                        }
+                                    });
+                                    return;
+                                }
+                            }
+                            selectedFile = null;
+                        }
+                    }
+
+                };
+                $('#elfinder').elfinder(options).elfinder('instance');
+            },
+                goAnchor(selector, index) {
+                    this.active = index;
+                    var anchor = this.$el.querySelector(selector)
+                    // document.body.scrollTop = anchor.offsetTop-50; // chrome
+                    // document.documentElement.scrollTop = anchor.offsetTop-50; // firefox
+                    let total = anchor.offsetTop - 100;
+                    let distance = document.documentElement.scrollTop || document.body.scrollTop
+                    // this.container.scrollTop // 获取到顶部的距离(this.container便是.cate-list,为了方便存起来了)
+                    let step = total / 50;
+                    //const _self = this;
+                    //console.log('total:' + total + 'distance:' + distance);
+                    if (total > distance) {
+                        smoothDown()
+                    } else {
+                        let newTotal = distance - total
+                        step = newTotal / 50
+                        smoothUp()
+                    }
+                    function smoothDown() {
+                        if (distance < total) {
+                            distance += step
+                            // _this.scrollTop = distance;
+                            document.body.scrollTop = distance
+                            document.documentElement.scrollTop = distance
+
+                            setTimeout(smoothDown, 10);
+                        } else {
+                            // _this.scrollTop = total
+                            document.body.scrollTop = total
+                            document.documentElement.scrollTop = total
+
+                        }
+                    }
+                    function smoothUp() {
+                        if (distance > total) {
+                            distance -= step
+                            //_this.scrollTop = distance
+                            document.body.scrollTop = distance
+                            document.documentElement.scrollTop = distance
+                            setTimeout(smoothUp, 10)
+                        } else {
+                            // _this.scrollTop = total
+                            document.body.scrollTop = distance
+                            document.documentElement.scrollTop = distance
+                        }
+                    }
+
+                },
+                getCategoryCasCader() {
+                    var $this = this;
+                    $.ajax({
+                        type: 'Get',
+                        url: '/rest/category/product/cascader',
+                        success: function (data) {
+                            if (data.success == true) {
+                                $this.cascader = $this.getTreeData(data.data);
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //富文本编辑框
+                fetchData() {
+                    setTimeout(() => {
+                        if (CKEDITOR.instances['editor1']) {
+                            CKEDITOR.remove(CKEDITOR.instances['editor1']);
+                            $('#cke_editor1').remove();
+                        }
+                        //渲染富文本框
+                        this.descEditor = CKEDITOR.replace("editor1", {
+                            uiColor: '#EFF2F7',
+                            height: '300px',
+                        });
+
+                        if (CKEDITOR.instances['editor2']) {
+                            CKEDITOR.remove(CKEDITOR.instances['editor2']);
+                            $('#cke_editor2').remove();
+                        }
+                        //渲染富文本框
+                        this.descEditor2 = CKEDITOR.replace("editor2", {
+                            uiColor: '#EFF2F7',
+                            height: '300px',
+                        });
+                    }, 0)
+                    /*数据调用之前，先清空值*/
+                },
+            },
+            components: {
+
+            },
+            mounted() {
+                this.$nextTick(function () {
+                    //window.addEventListener('scroll', this.onScroll)
+                })
+                this.fetchData();
+                //窗口大小改变时重新渲染table
+                var resizeTimer = null;
+                $(window).resize(() => {
+                    if (resizeTimer) clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        ++this.menuKey1
+                        ++this.menuKey2
+                    } , 100);
+                });
+            }
+        }
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#wrapper');
+    </script>
+</body>

@@ -1,0 +1,300 @@
+﻿
+@{
+    ViewData["Title"] = "SSOrderList";
+}
+
+<body class="plr20">
+    <div id="sslist">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>订单管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>ShipStation订单</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <article class="administration-tenant-container">
+            <!--搜索-->
+            <el-col :span="24" class="toolbar">
+                <el-form :inline="true" size="small" :model="filters" v-on:submit.native.prevent>
+
+                    <el-form-item label="订单编号">
+                        <el-input placeholder="请输入订单编号" v-model="filters.searchKey"></el-input>
+                    </el-form-item>
+                    <el-form-item label="订单状态">
+                        <el-select v-model="filters.status" placeholder="请选择状态" clearable>
+                            <el-option v-for="item in statusList"
+                                       :key="item.value"
+                                       :label="item.label"
+                                       :value="item.value">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    @*<el-form-item label="是否删除">
+                            <el-select v-model="filters.isDeleted" placeholder="请选择状态" clearable>
+                                <el-option v-for="item in deletedList"
+                                           :key="item.value"
+                                           :label="item.label"
+                                           :value="item.value">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>*@
+
+                    <el-form-item>
+                        <el-button v-on:click="search" icon="el-icon-search">搜索</el-button>
+                    </el-form-item>
+                    @*<el-form-item>
+                            <el-button type="primary" v-on:click="create" icon="el-icon-edit">新增</el-button>
+                        </el-form-item>*@
+                </el-form>
+            </el-col>
+            <el-table :data="orderList" size="mini" :height="height_table" highlight-current-row v-loading="listLoading">
+                <el-table-column prop="id" label="ID" width="50"></el-table-column>
+                <el-table-column prop="orderNumber" label="订单编号" width="180"></el-table-column>
+                <el-table-column prop="orderStatus" label="订单状态" width="150"></el-table-column>
+                <el-table-column prop="paymentMethod" label="支付方式" width="150"></el-table-column>
+                <el-table-column prop="customerUsername" label="姓名"></el-table-column>
+                <el-table-column prop="customerEmail" label="邮箱"></el-table-column>
+                <el-table-column prop="orderDateString" label="下单时间"></el-table-column>
+                <el-table-column prop="modifyDateString" label="修改时间"></el-table-column>
+                <el-table-column prop="stockStatus" label="出库状态" min-width="80">
+                    <template slot-scope="scope">
+                        <el-tag size="small" v-if="scope.row.stockStatus == 0">未出库</el-tag>
+                        <el-tag size="small" v-if="scope.row.stockStatus == 1" type="info">已出库</el-tag>
+
+                    </template>
+                </el-table-column>
+                <el-table-column prop="printStatus" label="打印状态" min-width="80">
+                    <template slot-scope="scope">
+                        <el-tag size="small" v-if="scope.row.printStatus == 0">未打印</el-tag>
+                        <el-tag size="small" v-if="scope.row.printStatus == 1" type="info">已打印</el-tag>
+
+                    </template>
+                </el-table-column>
+                <el-table-column width="220" label="操作">
+                    <template slot-scope="scope">
+                        <el-dropdown trigger="click" size="small">
+                            <el-button type="primary" size="mini" class="mb5">
+                                操作
+                                <i class="el-icon-caret-bottom el-icon--right"></i>
+                            </el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item>
+                                    <div v-on:click="openOrderSummary(scope.row.id)">Order Summary</div>
+                                </el-dropdown-item>
+                                <el-dropdown-item>
+                                    <div v-on:click="openPackingSlips(scope.row.id)">Packing Slips</div>
+                                </el-dropdown-item>
+                                <el-dropdown-item v-if="scope.row.stockStatus == 0">
+                                    <div v-on:click="stockOut(scope.row.id)">出库</div>
+                                </el-dropdown-item>
+                                @*<el-dropdown-item>
+                                        <div v-on:click="openPickList(scope.row.id)">Pick List</div>
+                                    </el-dropdown-item>*@
+                                @*<el-dropdown-item>
+                                        <div v-on:click="printOrder(scope.row.orderNumber)">打印订单</div>
+                                    </el-dropdown-item>*@
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <!--分页-->
+            <el-col :span="24" class="toolbar toolbar--bottom">
+                <el-pagination v-on:size-change="handleSizeChange"
+                               v-on:current-change="handleCurrentChange"
+                               :current-page.sync="page"
+                               :page-sizes="[10,20,30,40,50]"
+                               :page-size="pageSize"
+                               layout="total, sizes, prev, pager, next, jumper"
+                               :total="total" style="float:right;">
+                </el-pagination>
+            </el-col>
+        </article>
+
+
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    listLoading: false,//表格loading: false,
+                    orderList: [],
+                    height_table: 650,//表格高度
+                    statusEditList: [{
+                        value: 1,
+                        label: '初始'
+                    }, {
+                        value: 2,
+                        label: '正常'
+                    }, {
+                        value: 3,
+                        label: '关闭'
+                    }],
+                    statusList: [{
+                        value: 'awaiting_payment',
+                        label: 'awaiting_payment'
+                    }, {
+                        value: 'awaiting_shipment',
+                        label: 'awaiting_shipment'
+                    }, {
+                        value: 'pending_fulfillment',
+                        label: 'pending_fulfillment'
+                    }, {
+                        value: 'shipped',
+                        label: 'shipped'
+                    }, {
+                        value: 'on_hold',
+                        label: 'on_hold'
+                    }, {
+                        value: 'cancelled',
+                        label: 'cancelled'
+                    }],
+                    deletedList: [{
+                        value: 0,
+                        label: '全部显示'
+                    }, {
+                        value: 1,
+                        label: '未删除'
+                    }, {
+                        value: 2,
+                        label: '已删除'
+                    }],
+                    filters: {
+                        searchKey: "",
+                        status: void 0,
+                        isDeleted: void 0
+                    },
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+
+                }
+            },
+            created() {
+                this.getList();
+            },
+            methods: {
+                // 改变每页显示几条数据
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getList();
+                },
+                getList() {
+                    this.listLoading = true;
+                    var _self = this;
+                    var filter = {
+                        key: _self.filters.searchKey,
+                        status: _self.filters.status,
+                        //isDeleted: _self.filters.isDeleted,
+                        pageSize: _self.pageSize,
+                        currentPage: _self.page
+                    };
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/ssorder/page/get',
+                        data: filter,
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.page.totalCount;
+                                _self.orderList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                            _self.listLoading = false;
+                        }
+                    });
+                },
+                search() {
+                    this.page = 1;
+                    this.getList();
+                },
+                //【Order Summary】
+                openOrderSummary(orderId) {
+                    window.parent.MainIndex.addTabByIframe("Order Summary_" + orderId, "/order/SSOrderDetail?orderId=" + orderId, "Order Summary");
+                },
+                //【Packing Slips】
+                openPackingSlips(orderId) {
+                    window.parent.MainIndex.addTabByIframe("Packing Slips_" + orderId, "/order/SSPackingSlips?orderId=" + orderId, "Packing Slips");
+                },
+                //【Pick List】
+                openPickList(orderId) {
+                    //window.parent.MainIndex.addTabByIframe("Pick List_" + orderId, "/order/SSOrderDetail?orderId=" + orderId, "Pick List");
+                },
+                stockOut() {
+                    var _self = this;
+                    this.$confirm("确定要出库吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '../../rest/ssorder/stock/out',
+                            data: { id: id},
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.$notify.success({
+                                        title: '成功',
+                                        message: "出库成功"
+                                    });
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                }
+
+
+
+            }
+        };
+        var Ctor = Vue.extend(Main)
+        new Ctor().$mount('#sslist')
+    </script>
+
+</body>
+

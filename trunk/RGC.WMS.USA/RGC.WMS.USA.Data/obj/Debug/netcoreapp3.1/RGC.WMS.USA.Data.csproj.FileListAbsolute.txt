@@ -1,0 +1,14 @@
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\RGC.WMS.USA.Data.deps.json
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\RGC.WMS.USA.Data.dll
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\RGC.WMS.USA.Data.pdb
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\HuigeTec.Core.Domain.dll
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\HuigeTec.Core.Helpers.dll
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\RGC.WMS.USA.Domain.dll
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\bin\Debug\netcoreapp3.1\RGC.WMS.USA.Domain.pdb
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.csprojAssemblyReference.cache
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.AssemblyInfoInputs.cache
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.AssemblyInfo.cs
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.csproj.CoreCompileInputs.cache
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.csproj.CopyComplete
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.dll
+D:\SVN\RGC\RGC.WMS\trunk\RGC.WMS.USA\RGC.WMS.USA.Data\obj\Debug\netcoreapp3.1\RGC.WMS.USA.Data.pdb

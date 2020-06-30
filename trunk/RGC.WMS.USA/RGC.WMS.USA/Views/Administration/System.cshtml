@@ -1,0 +1,382 @@
+﻿
+@{
+    ViewData["Title"] = "System";
+}
+
+<body class="plr20">
+    <div id="systemList">
+        <template>
+            <!-- 标题和地址 -->
+            <el-row>
+                <el-col :span="24" class="breadcrumb-container">
+                    @*<strong class="title">用户管理</strong>*@
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item><strong>系统管理</strong></el-breadcrumb-item>
+                        <el-breadcrumb-item>系统配置</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </el-col>
+            </el-row>
+            <!--工具条-->
+            <el-col :span="24" class="toolbar">
+                <el-form :inline="true" size="small" :model="filters">
+                    <el-form-item>
+                        <el-input placeholder="系统名称" v-model="filters.searchKey"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button icon="el-icon-search" v-on:click="search">查询</el-button>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" icon="el-icon-plus" v-on:click="openCreateDialog">新增</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </template>
+        <!-- 列表 -->
+        <el-table v-loading="listLoading" size="small" :data="systemList">
+            <el-table-column prop="id" label="ID" width="100">
+            </el-table-column>
+            <el-table-column prop="name" label="系统名称" width="200">
+            </el-table-column>
+            <el-table-column prop="displayName" label="中文名" width="200">
+            </el-table-column>
+            <el-table-column prop="domainName" label="域名" width="200">
+            </el-table-column>
+            <el-table-column prop="ipAddress" label="IP" width="200">
+            </el-table-column>
+            <el-table-column prop="isStatic" label="是否常量" width="200">
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.isStatic">是</el-tag>
+                    <el-tag type="info" v-else>否</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" min-width="120" fixed="right">
+                <template slot-scope="scope">
+                    <el-dropdown trigger="click" size="small">
+                        <el-button size="small" class="waves-effect">
+                            操作<i class="el-icon-caret-bottom el-icon--right"></i>
+                        </el-button>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item v-if="">
+                                <div v-on:click="openUpdateDialog(scope.row.id)">编 辑</div>
+                            </el-dropdown-item>
+                            <el-dropdown-item v-if="!scope.row.isStatic">
+                                <div v-on:click="deleteSystem(scope.row)">删 除</div>
+                            </el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </template>
+            </el-table-column>
+        </el-table>
+        <!--分页-->
+        <el-col :span="24" class="toolbar">
+            <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="filters.currentPage" :page-sizes="[10,20,30,40,50]" :page-size="filters.pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+            </el-pagination>
+        </el-col>
+        <template>
+            <!--// 添加系统编辑的弹出框-->
+            <el-dialog :title="dialogCreateOrUpdate.title"
+                       :visible.sync="dialogCreateOrUpdate.isShow"
+                       size="tiny" :close-on-click-modal="false">
+                <el-tabs ref="tab" v-model="activeName" v-loading="dialogLoading">
+                    <el-tab-pane label="系统信息" name="first">
+                        <el-form :rules="rules" size="small" :model="dialogCreateOrUpdate.system" ref="SystemFrom" :inline="true"
+                                 label-position="right" label-width="80px">
+                            <el-form-item label="名称" prop="name">
+                                <el-input placeholder="name" v-model="dialogCreateOrUpdate.system.name" style="width:auto;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="中文名称" prop="displayName">
+                                <el-input placeholder="displayName" v-model="dialogCreateOrUpdate.system.displayName" style="width:auto;"></el-input>
+                            </el-form-item>
+
+                            <el-form-item label="域名" prop="domainName">
+                                <el-input placeholder="domainName" v-model="dialogCreateOrUpdate.system.domainName" style="width:auto;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="ip地址" prop="ipAddress">
+                                <el-input placeholder="ipAddress" v-model="dialogCreateOrUpdate.system.ipAddress" style="width:auto;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="是否常量" prop="isStatic">
+                                <el-checkbox v-model="dialogCreateOrUpdate.system.isStatic"></el-checkbox>
+                            </el-form-item>
+                            <el-form-item label="描述" prop="desc" style="width:100%">
+                                <el-input type="textarea" autosize placeholder="请输入内容" v-model="dialogCreateOrUpdate.system.desc"
+                                          style="width:400px" :rows="2" maxlength="100" show-word-limit></el-input>
+                            </el-form-item>
+                        </el-form>
+                    </el-tab-pane>
+                </el-tabs>
+                <span slot="footer" class="dialog-footer">
+                    <el-button size="small" v-on:click="dialogCreateOrUpdate.isShow = false">取 消</el-button>
+                    <el-button size="small" type="primary" v-on:click="saveSystem">保 存</el-button>
+                </span>
+            </el-dialog>
+        </template>
+    </div>
+</body>
+
+@section Scripts{
+    <script>
+        var Main = {
+            data() {
+                return {
+                    systemList: [],
+                    filters: {
+                        searchKey: '',
+                        pageSize: 10,
+                        currentPage: 1,
+                    },
+                    activeName: "first",
+                    listLoading: false,
+                    dialogLoading: false,
+                    total: 0,
+                    dialogCreateOrUpdate: {
+                        title: "",
+                        isShow: false,
+                        system: { id: 0, isStatic: true }
+                    },
+                    rules: {
+                        name: [{ required: true, message: '请输入名称', trigger: 'change' }],
+                        displayName: [{ required: true, message: '请输入中文名', trigger: 'change' }],
+                        domainName: [{ required: true, message: '请输入域名', trigger: 'change' }],
+                        ipAddress: [{ required: true, message: '请输入ip地址', trigger: ['blur', 'change'] }],
+                    }
+                };
+            },
+            created() {
+                this.getSystemList();
+            },
+            methods: {
+                // 改变每页显示几条数据
+                handleSizeChange(val) {
+                    this.filters.pageSize = val;
+                    this.getSystemList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.filters.currentPage = val;
+                    this.getSystemList();
+                },
+                //【查询】
+                search: function () {
+                    this.filters.currentPage = 1;
+                    this.getSystemList();
+                },
+                getSystemList: function () {
+                    this.listLoading = true;
+                    var _self = this;
+                    $.ajax({
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/system/systems/page/get',
+                        data: JSON.stringify(_self.filters),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.page.totalCount;
+                                _self.systemList = data.data;
+                                _self.listLoading = false;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.listLoading = false;
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                openCreateDialog: function () {
+                    this.dialogCreateOrUpdate.isShow = true;
+                    this.dialogCreateOrUpdate.title = "创建系统";
+                    this.dialogCreateOrUpdate.system = { id: 0, isStatic: true };
+                },
+                openUpdateDialog(systemId) {
+                    var _self = this;
+                    _self.dialogCreateOrUpdate.isShow = true;
+                    _self.dialogCreateOrUpdate.title = "编辑系统id:" + systemId;
+                    $.ajax({
+                        type: 'GET',
+                        url: '../../rest/system/detail/' + systemId,
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.dialogCreateOrUpdate.system = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                saveSystem() {
+                    this.dialogLoading = true;
+                    var _self = this;
+                    _self.$refs.SystemFrom.validate((valid) => {
+                        if (valid) {
+                            if (_self.dialogCreateOrUpdate.system.id > 0) {
+                                //修改系统
+                                $.ajax({
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    contentType: 'application/json',
+                                    url: '../../rest/system/update',
+                                    data: JSON.stringify(_self.dialogCreateOrUpdate.system),
+                                    success: function (data) {
+                                        if (data.success == true) {
+                                            _self.dialogLoading = false;
+                                            _self.dialogCreateOrUpdate.isShow = false;
+                                            _self.getSystemList();
+                                            _self.$notify.success({
+                                                title: '成功',
+                                                message: "系统修改成功"
+                                            });
+                                        } else {
+                                            _self.dialogLoading = false;
+                                            _self.$notify.error({
+                                                title: '错误',
+                                                message: data.msg
+                                            });
+                                        }
+                                    },
+                                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                        _self.dialogLoading = false;
+                                        if (errorThrown == "Unauthorized") {
+                                            window.parent.MainIndex.openLoginFrom();
+                                            _self.$message({
+                                                type: 'error',
+                                                message: XMLHttpRequest.responseJSON.msg
+                                            });
+                                        } else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: errorThrown
+                                            });
+                                        }
+                                    }
+                                });
+                            } else {
+                                //新增系统
+                                $.ajax({
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    contentType: 'application/json',
+                                    url: '../../rest/system/create',
+                                    data: JSON.stringify(_self.dialogCreateOrUpdate.system),
+                                    success: function (data) {
+                                        if (data.success == true) {
+                                            _self.dialogLoading = false;
+                                            _self.dialogCreateOrUpdate.isShow = false;
+                                            _self.getSystemList();
+                                            _self.$notify.success({
+                                                title: '成功',
+                                                message: "系统资料新增成功"
+                                            });
+                                        } else {
+                                            _self.dialogLoading = false;
+                                            _self.$notify.error({
+                                                title: '错误',
+                                                message: data.msg
+                                            });
+                                        }
+                                    },
+                                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                        _self.dialogLoading = false;
+                                        if (errorThrown == "Unauthorized") {
+                                            window.parent.MainIndex.openLoginFrom();
+                                            _self.$message({
+                                                type: 'error',
+                                                message: XMLHttpRequest.responseJSON.msg
+                                            });
+                                        } else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: errorThrown
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        } else {
+                            _self.dialogLoading = false;
+                            console.log('error submit!!');
+                            return false;
+                        }
+                    })
+
+                },
+                deleteSystem(system) {
+                    var _self = this;
+                    this.$confirm('此操作将删除[' + system.name + '], 是否继续?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '../../rest/system/delete/' + system.id,
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.getSystemList();
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+                        _self.$message({
+                            type: 'info',
+                            message: '已取消'
+                        });
+                    });
+                }
+            }
+        }
+        var Ctor = Vue.extend(Main)
+        new Ctor().$mount('#systemList')
+    </script>
+}

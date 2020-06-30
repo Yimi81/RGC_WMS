@@ -1,0 +1,171 @@
+﻿
+@{
+    ViewBag.Title = "FileManage";
+}
+
+<link rel="stylesheet" href="/lib/elFinder/lib/jquery-ui/themes/base/all.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/elfinder.full.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/theme.css" />
+<body class="plr20">
+    <div id="wrapper">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    @*<el-breadcrumb-item :to="{ path: '../index.html' }">首页</el-breadcrumb-item>*@
+                    <el-breadcrumb-item><strong>Sku管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>附件管理</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <template>
+            <article class="administration-maintenance-container">
+                <div ref="elfinder" id="elfinder"></div>
+
+
+            </article>
+        </template>
+    </div>
+    <script src="/lib/elFinder/lib/jquery-ui/jquery-ui.min.js"></script>
+    <script src="/lib/elFinder/lib/elfinder/js/elfinder.full.js"></script>
+    <script src="/lib/elFinder/lib/elfinder/js/i18n/elfinder.zh_CN.js"></script>
+    <script type="text/javascript" src="/lib/ckeditor/ckeditor.js"></script>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    previewSrc: '',
+                    mainSrc: '',
+                    selectedFile: '',
+                    selectedFilePath: '',
+                    selectedFileByte: '',
+                    fileManageVisable: false,
+                    active: 0,
+                    cascader: [],
+                    // 添加自定义配置
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0,
+                        type: void 0,
+                        status: void 0
+                    },
+                    total: 30,
+                    page: 1,
+                    pageSize: 10,
+                    listLoading: false,
+                }
+            },
+            created() {
+             
+                setTimeout(() => {
+                    var path = getQueryString("path");
+                    this.fileManageInitial(path);
+                }, 0)
+            },
+            methods: {
+                fileManageInitial(defalutPath) {
+                    var path = '';
+                    var isReadOnly = false;
+                    var isLocked = false;
+                    var isShowOnly = false;
+                    if (defalutPath != undefined && defalutPath != null && defalutPath != "") {
+                        path = defalutPath;
+                        isReadOnly = true;
+                        isLocked = true;
+                        //isShowOnly = true;
+                            
+                    }
+                    var _self = this;
+                    var myCommands = elFinder.prototype._options.commands;
+                    var disabled = ['callback', 'chmod', 'editor', 'netmount', 'ping',  'zipdl', 'help']; // Not yet implemented commands in elFinder.NetCore
+                    elFinder.prototype.i18.en.messages.TextArea = "Edit";
+
+                    $.each(disabled, function (i, cmd) {
+                        (idx = $.inArray(cmd, myCommands)) !== -1 && myCommands.splice(idx, 1);
+                    });
+
+                    var options = {
+                        url: '/sku/connector', // Default (Local File System)
+                        customData: { path:path,isReadOnly:isReadOnly,isLocked:isLocked,isShowOnly:isShowOnly }, // customData passed in every request to the connector as query strings. These values are used in FileController's Index method.
+                        rememberLastDir: false, // Prevent elFinder saving in the Browser LocalStorage the last visited directory
+                        commands: myCommands,
+                        lang: 'zh_CN', // elFinder supports UI and messages localization. Check the folder Content\elfinder\js\i18n for all available languages. Be sure to include the corresponding .js file(s) in the JavaScript bundle.
+                        uiOptions: { // UI buttons available to the user
+                        toolbar: [
+                            ['back', 'forward'],
+                            ['reload'],
+                            ['home', 'up'],
+                            ['mkdir', 'mkfile', 'upload'],
+                            ['open', 'download'],
+                            ['undo', 'redo'],
+                            ['info'],
+                            ['quicklook'],
+                            ['copy', 'cut', 'paste'],
+                            ['rm'],
+                            ['duplicate', 'rename', 'edit'],
+                            ['selectall', 'selectnone', 'selectinvert'],
+                            ['view', 'sort'],
+                            ['search']
+                        ]
+
+                    }, handlers: {
+                        select: function (event, elfinderInstance) {
+                            if (event.data.selected.length == 1) {
+                                var item = $('#' + event.data.selected[0]);
+                                if (!item.hasClass('directory')) {
+                                    selectedFile = event.data.selected[0];
+                                    previewSrc = "/sku/connector?cmd=file&target=" + selectedFile + "&_t=" + event.timeStamp;
+
+                                    $.ajax({
+                                        type: 'post',
+                                        url: '/sku/selectFile',
+                                        data: { target: selectedFile },
+                                        success: function (data) {
+                                            selectedFilePath = data;
+                                        },
+                                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                            if (errorThrown == "Unauthorized") {
+                                                window.parent.MainIndex.openLoginFrom();
+                                                _self.$message({
+                                                    type: 'error',
+                                                    message: XMLHttpRequest.responseJSON.msg
+                                                });
+                                            } else {
+                                                _self.$message({
+                                                    type: 'error',
+                                                    message: errorThrown
+                                                });
+                                            }
+                                        }
+                                    });
+                                    return;
+                                }
+                            }
+                            selectedFile = null;
+                        }
+                    }
+
+                };
+                $('#elfinder').elfinder(options).elfinder('instance');
+            },
+        },
+            components: {
+
+            },
+            mounted() {
+                this.$nextTick(function () {
+                    window.addEventListener('scroll', this.onScroll)
+                })
+            }
+            }
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#wrapper');
+
+         function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+    </script>
+</body>

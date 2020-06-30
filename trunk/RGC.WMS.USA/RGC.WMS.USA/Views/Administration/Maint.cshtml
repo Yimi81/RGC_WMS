@@ -1,0 +1,203 @@
+﻿
+@{
+    ViewData["Title"] = "Maint";
+}
+
+<body class="plr20">
+    <div id="maint">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>系统管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>日常维护</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <template>
+            <article class="administration-maintenance-container" v-loading="loading">
+                <el-tabs v-model="activeName">
+                    <!-- 基本信息 -->
+                    <el-tab-pane label="静态变量" name="first">
+                        <el-row class="mb10">
+                            <el-col :span="21">
+                                <h2>[静态变量]</h2>
+                            </el-col>
+                            <el-col :span="3" class="tr">
+                                <el-button size="small" type="primary" v-on:click="getSystemList" icon="el-icon-refresh">全部刷新</el-button>
+                            </el-col>
+                        </el-row>
+                        <el-collapse v-model="activeNames" v-on:change="handleChange">
+                            <el-collapse-item title="系统静态变量" name="1">
+                                <el-table :fit="true" stripe :show-header="false" v-loading="loading" :data="staticVariable.administration">
+                                    <el-table-column prop="name" min-width="200">
+                                    </el-table-column>
+                                    <el-table-column width="105">
+                                        <template slot-scope="scope">
+                                            <el-button size="mini" v-on:click="refreshDictionary(scope.row.path)" icon="el-icon-refresh">刷新</el-button>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-collapse-item>
+                            <el-collapse-item title="产品静态变量" name="2">
+                                <el-table :fit="true" stripe :show-header="false" v-loading="loading" :data="staticVariable.product">
+                                    <el-table-column prop="name" min-width="200">
+                                    </el-table-column>
+                                    <el-table-column width="105">
+                                        <template slot-scope="scope">
+                                            <el-button size="mini" v-on:click="refreshDictionary(scope.row.path)" icon="el-icon-refresh">刷新</el-button>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-collapse-item>
+                            <el-collapse-item title="仓库静态变量" name="3">
+                                <el-table :fit="true" stripe :show-header="false" v-loading="loading" :data="staticVariable.warehouse">
+                                    <el-table-column prop="name" min-width="200">
+                                    </el-table-column>
+                                    <el-table-column width="105">
+                                        <template slot-scope="scope">
+                                            <el-button size="mini" v-on:click="refreshDictionary(scope.row.path)" icon="el-icon-refresh">刷新</el-button>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-collapse-item>
+                        </el-collapse>
+                    </el-tab-pane>
+                </el-tabs>
+            </article>
+        </template>
+    </div>
+</body>
+
+
+@section Scripts{
+    <script type="text/javascript">
+        let _tagId = 0;
+        var Main = new Vue({
+            el: '#maint',
+            data() {
+                return {
+                    loading: false,
+                    activeName: 'first',
+                    activeNames: ['1'],
+                    staticVariable: {
+                        administration: [
+                            {
+                                name: 'BmsUserDict',
+                                path: '../../rest/bmsuser/dict/refresh'
+                            },
+                            {
+                                name: 'MenuDict',
+                                path: '../../rest/bmsmenu/dict/refresh'
+                            },
+                            {
+                                name: 'OrganizationDict',
+                                path: '../../rest/organization/dict/refresh'
+                            },
+                            {
+                                name: 'RoleDict',
+                                path: '../../rest/role/dict/refresh'
+                            },
+                            {
+                                name: 'PlatformDict',
+                                path: '../../rest/platform/dict/refresh'
+                            },
+                            {
+                                name: 'SystemDict',
+                                path: '../../rest/system/dict/refresh'
+                            }
+                        ],
+                        sku: [],
+                        product: [],
+                        warehouse: [
+                            {
+                                name: 'WarehouseDict',
+                                path: '../../rest/warehouse/dict/refresh'
+                            }
+                        ],
+                        custom: [],
+                        content: [],
+                        order: []
+                    },
+                    systemList: []
+                }
+            },
+            methods: {
+                getSystemList: function () {
+                    var _self = this;
+                    $.ajax({
+                        type: 'get',
+                        url: '/rest/system/systems/select/list',
+                        async: false,
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.systemList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                handleChange() {
+                    this.getSystemList();
+                },
+                refreshDictionary(path) {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: path,
+                        success: function (data) {
+                            if (data.code == 0) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '操作成功!',
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                }
+            },
+            mounted() {
+                this.getSystemList();
+            },
+        })
+    </script>
+
+}
+

@@ -1,0 +1,1170 @@
+﻿
+@{
+    /**/
+
+    ViewBag.Title = "SkuDailyPrice";
+}
+<style>
+    .canvasjs-chart-credit {
+        display: none;
+    }
+</style>
+<body class="plr20">
+    <div id="skuDailyPrice">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>报表管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>每日零售价</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-row>
+
+        </el-row>
+
+        <el-tabs v-model="activeName" type="card">
+            <el-tab-pane label="列表" name="first">
+                <el-row>
+                    <!--工具条-->
+                    <el-row>
+                        <el-col :span="24" class="toolbar">
+                            <el-form :inline="true" :model="filters" size="small">
+                                <el-form-item label="名称或型号">
+                                    <el-select v-model="filters.key"
+                                               clearable
+                                               filterable
+                                               remote
+                                               reserve-keyword
+                                               placeholder="请输入名称或型号"
+                                               :remote-method="remoteMethod"
+                                               :loading="loading">
+                                        <el-option v-for="item in searchList"
+                                                   :key="item.value"
+                                                   :label="item.value"
+                                                   :value="item.value">
+                                        </el-option>
+                                    </el-select>
+
+                                </el-form-item>
+                                <el-form-item label="平台">
+                                    <el-select v-model="filters.platformIds" placeholder="请选择平台" multiple clearable>
+                                        <el-option v-for="item in platformList"
+                                                   :key="item.id"
+                                                   :label="item.eName"
+                                                   :value="item.id">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                @*<el-form-item label="来源">
+                                        <el-select v-model="filters.sources" placeholder="请选择来源" multiple clearable>
+                                            <el-option v-for="item in sourceList"
+                                                       :key="item.id"
+                                                       :label="item.label"
+                                                       :value="item.id">
+                                            </el-option>
+                                        </el-select>
+                                    </el-form-item><br />*@
+                                <el-form-item label="日期">
+                                    <el-date-picker v-model="filters.dateRange"
+                                                    type="daterange"
+                                                    value-format="yyyy-MM-dd"
+                                                    range-separator="-"
+                                                    start-placeholder="开始日期"
+                                                    end-placeholder="结束日期">
+                                    </el-date-picker>
+                                    @*<el-date-picker v-model="filters.startTime"
+                                                        type="date"
+                                                        value-format="yyyy-MM-dd"
+                                                        placeholder="开始日期"
+                                                        :picker-options="pickerOptions3">
+                                        </el-date-picker>
+                                        -
+                                        <el-date-picker v-model="filters.endTime"
+                                                        type="date"
+                                                        value-format="yyyy-MM-dd"
+                                                        placeholder="结束日期"
+                                                        :picker-options="pickerOptions4">
+                                        </el-date-picker>*@
+
+                                </el-form-item>
+                               
+                                <el-form-item>
+                                    <el-button icon="el-icon-search" v-on:click="search" size="small">查询</el-button>
+                                    @*<el-button type="primary" icon="el-icon-edit-outline" v-on:click="openAddForm()" size="small">人工录入</el-button>*@
+                                    @*<el-button type="primary" v-on:click="refreshDictionary('../../rest/administration/refresh/sku/dailyprice')" size="small">刷新数据</el-button>*@
+
+                                </el-form-item>
+                            </el-form>
+                        </el-col>
+
+                    </el-row>
+                    <!--列表-->
+                    <el-table :data="dailyPricelist" highlight-current-row v-loading="listLoading" style="width: 100%" size="mini">
+                        @*<el-table-column prop="id" label="Id" width="100" fixed="left"></el-table-column>
+                            <el-table-column prop="itemId" label="itemId" width="100" fixed="left" sortable></el-table-column>*@
+                        <el-table-column prop="itemName" label="名称" min-width="180" fixed="left" sortable></el-table-column>
+                        <el-table-column width="120" label="图片" align="center" fixed="left">
+                            <template slot-scope="scope">
+                                <img v-if="scope.row.srcFull" class="pimg" alt="no image" :src="scope.row.srcFull" height="50">
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="factoryModel" label="型号" min-width="80" fixed="left" sortable></el-table-column>
+                        <el-table-column prop="platformName" label="平台名称" min-width="80" fixed="left" sortable></el-table-column>
+                        <el-table-column prop="source" label="来源" min-width="80" fixed="left" sortable>
+                            <template slot-scope="scope">
+                                <el-tag v-if="scope.row.source == 0">未知</el-tag>
+                                <el-tag v-else-if="scope.row.source == 1" type="success">接口</el-tag>
+                                <el-tag v-else-if="scope.row.source == 2" type="warning">爬虫</el-tag>
+                                @*<el-tag v-else-if="scope.row.source == 3" type="info">人工录入</el-tag>*@
+                            </template>
+
+                        </el-table-column>
+                        @*<el-table-column prop="priceString" label="每日零售价" width="150"></el-table-column>*@
+                        <el-table-column prop="reviewScoreFloat" label="评分" min-width="150">
+                            <template slot-scope="scope">
+                                <el-rate v-model="scope.row.reviewScoreFloat"
+                                         disabled
+                                         show-score
+                                         text-color="#ff9900">
+                                </el-rate>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="reviewCount" label="评论数" width="150">
+                        </el-table-column>
+                        <el-table-column prop="dateString" label="获取时间" min-width="120"></el-table-column>
+                        @*<el-table-column prop="remarks" label="备注" min-width="120"></el-table-column>*@
+
+                        @*<el-table-column label="操作" width="100" fixed="right">
+                                <template slot-scope="scope">
+                                    <el-button size="small" v-on:click="openDetail(scope.row)">编辑</el-button>
+                                </template>
+                            </el-table-column>*@
+                    </el-table>
+
+                    <!--工具条-->
+                    <el-col :span="24" class="toolbar">
+                        <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="filters.currentPage" :page-sizes="[10,20,30,40,50]" :page-size="filters.pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+                        </el-pagination>
+                    </el-col>
+                </el-row>
+
+            </el-tab-pane>
+            <el-tab-pane label="图表" name="second">
+                <el-row>
+                    <el-col :span="24" class="toolbar">
+                        <el-form :inline="true" size="small" :model="filters2">
+                            <el-form-item label="名称或型号">
+                                <el-select v-model="filters2.key"
+                                           clearable
+                                           filterable
+                                           remote
+                                           reserve-keyword
+                                           placeholder="请输入名称或型号"
+                                           :remote-method="remoteMethod"
+                                           :loading="loading">
+                                    <el-option v-for="item in searchList"
+                                               :key="item.value"
+                                               :label="item.value"
+                                               :value="item.value">
+                                    </el-option>
+                                </el-select>
+
+                            </el-form-item>
+                            <el-form-item label="平台">
+                                <el-select v-model="filters2.platformIds" placeholder="请选择平台" multiple clearable>
+                                    <el-option v-for="item in platformList"
+                                               :key="item.id"
+                                               :label="item.ename"
+                                               :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="来源">
+                                <el-select v-model="filters2.sources" placeholder="请选择来源" multiple clearable>
+                                    <el-option v-for="item in sourceList"
+                                               :key="item.id"
+                                               :label="item.label"
+                                               :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-radio-group v-model="filters2.type">
+                                    <el-radio :label="0">评分</el-radio>
+                                    <el-radio :label="1">评论数</el-radio>
+                                </el-radio-group>
+
+                            </el-form-item>
+                            <br />
+                            <el-form-item label="日期" class="mt10">
+                                <el-date-picker v-model="filters2.dateRange"
+                                                type="daterange"
+                                                value-format="yyyy-MM-dd"
+                                                range-separator="-"
+                                                start-placeholder="开始日期"
+                                                end-placeholder="结束日期">
+                                </el-date-picker>
+                                @*<el-date-picker v-model="filters2.startTime"
+                            type="date"
+                            value-format="yyyy-MM-dd"
+                            placeholder="开始日期"
+                            :picker-options="pickerOptions0">
+            </el-date-picker>
+            -
+            <el-date-picker v-model="filters2.endTime"
+                            type="date"
+                            value-format="yyyy-MM-dd"
+                            placeholder="结束日期"
+                            :picker-options="pickerOptions1">
+            </el-date-picker>*@
+                            </el-form-item>
+
+                            <el-form-item class="mt10">
+                                <el-button icon="el-icon-search" v-on:click="chartSearch" size="small">查询</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </el-col>
+
+                </el-row>
+                <el-row class="tc mt30">
+                    {{chartTitle}}
+                    <p class="mt10 fs14">{{chartFactoryModel}}</p>
+                </el-row>
+                <br />
+                <el-row class="mt20" v-loading="loading">
+
+                    <div id="chartContainer" style="min-height: 400px; max-width: 920px; margin: 0px auto;"></div>
+                </el-row>
+
+            </el-tab-pane>
+
+        </el-tabs>
+
+
+
+        <el-dialog title="编辑评分" :visible.sync="detailVisable" :close-on-click-modal="false" top="5%" width="50%">
+            <el-form :model="itemDailyPriceForm" label-width="100px" ref="editForm">
+                <el-form-item label="itemId" prop="itemId">
+                    {{itemDailyPriceForm.itemId}}
+                </el-form-item>
+                <el-form-item label="在售产品名称" prop="itemId">
+                    {{itemDailyPriceForm.itemName}}
+                </el-form-item>
+                <el-form-item label="工厂型号" prop="factoryModel">
+                    {{itemDailyPriceForm.factoryModel}}
+                    <el-input v-model="itemDailyPriceForm.factoryModel"></el-input>
+
+                </el-form-item>
+                <el-form-item label="平台" prop="platformName">
+                    {{itemDailyPriceForm.platformName}}
+                </el-form-item>
+                <el-form-item label="评分" prop="priceString">
+                    <el-input-number v-model="itemDailyPriceForm.priceString" :precision="2" :min="0" :controls="false"></el-input-number>
+                </el-form-item>
+                @*<el-form-item label="价格" prop="source">
+                        <el-radio-group v-model="itemDailyPriceForm.source">
+                            <el-radio :label="1">接口</el-radio>
+                            <el-radio :label="2">爬虫</el-radio>
+                            <el-radio :label="3">手工录入</el-radio>
+                        </el-radio-group>
+                    </el-form-item>*@
+                <el-form-item label="日期" prop="date">
+                    <el-date-picker v-model="itemDailyPriceForm.date"
+                                    value-format="yyyy-MM-dd"
+                                    type="date"
+                                    placeholder="选择日期">
+                    </el-date-picker>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" v-on:click="savePrice()">保 存</el-button>
+            </div>
+        </el-dialog>
+        <el-dialog title="录入价格" :visible.sync="addVisable" :close-on-click-modal="false" top="5%" width="50%">
+
+            <el-form :model="itemDailyPriceForm" size="small" label-width="100px" ref="editForm">
+                <el-form-item label="平台" prop="platformId">
+                    <el-select v-model="itemDailyPriceForm.platformId" placeholder="请选择平台" clearable v-on:change="platformChange">
+                        <el-option v-for="item in platformList"
+                                   :key="item.id"
+                                   :label="item.eName"
+                                   :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="产品" prop="itemName">
+                    <el-select v-model="itemDailyPriceForm.itemName"
+                               clearable
+                               filterable
+                               remote
+                               reserve-keyword
+                               placeholder="请输入产品名称或型号"
+                               :remote-method="remoteMethod2"
+                               :loading="loading"
+                               v-on:change="itemChange">
+                        <el-option v-for="item in searchItemList"
+                                   :key="item.itemName"
+                                   :label="item.itemName"
+                                   :value="item.itemName">
+                            <!--鼠标滑过，显示图片-->
+                            <el-popover placement="right"
+                                        trigger="hover">
+                                <img :src="item.srcFull" class="pimg" alt="no image" v-if="item.srcFull!=''" width="320">
+                                <i slot="reference">{{item.itemName}}</i>
+                            </el-popover>
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="itemId" prop="itemId">
+                    {{itemDailyPriceForm.itemId}}
+                </el-form-item>
+                @*<el-form-item label="平台" prop="platformName">
+                        {{itemDailyPriceForm.platformName}}
+                    </el-form-item>*@
+                <el-form-item label="工厂型号" prop="factoryModel">
+                    {{itemDailyPriceForm.factoryModel}}
+                </el-form-item>
+                <el-form-item label="价格" prop="priceString">
+                    <el-input-number v-model="itemDailyPriceForm.priceString" :precision="2" :min="0" :controls="false"></el-input-number>
+                </el-form-item>
+                @*<el-form-item label="价格" prop="priceString">
+                        <el-input-number v-model="itemDailyPriceForm.priceString" :precision="2" :min="0" :controls="false"></el-input-number>
+                    </el-form-item>*@
+                <el-form-item label="日期" prop="date">
+                    <el-date-picker v-model="itemDailyPriceForm.date"
+                                    value-format="yyyy-MM-dd"
+                                    type="date"
+                                    placeholder="选择日期">
+                    </el-date-picker>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" size="small" v-on:click="savePrice()">保 存</el-button>
+            </div>
+
+        </el-dialog>
+
+    </div>
+</body>
+
+@section scripts{
+    <script src="/js/canvasjs.min.js"></script>
+    <script type="text/javascript">
+        var Main = new Vue({
+            el: '#skuDailyPrice',
+            data() {
+                return {
+                    pickerOptions0: {
+                        disabledDate: (time) => {
+                            if (this.filters2.endTime != null) {
+                                var str = this.filters2.endTime.replace(/-/g, '/');
+                                var date = new Date(str);
+                                return time.getTime() > Date.now() || time.getTime() > date;
+                            } else {
+                                return time.getTime() > Date.now();
+
+                            }
+                        }
+                    },
+                    pickerOptions1: {
+                        disabledDate: (time) => {
+                            if (this.filters2.startTime != null) {
+                                console.log(this.filters2.startTime)
+                                var str = this.filters2.startTime.replace(/-/g, '/');
+                                var date = new Date(str);
+                                return time.getTime() < date;
+                            }
+
+                        }
+                    },
+                    pickerOptions3: {
+                        disabledDate: (time) => {
+                            if (this.filters.endTime != null) {
+                                var str = this.filters.endTime.replace(/-/g, '/');
+                                var date = new Date(str);
+                                return time.getTime() > Date.now() || time.getTime() > date;
+                            } else {
+                                return time.getTime() > Date.now();
+
+                            }
+
+                        }
+                    },
+                    pickerOptions4: {
+                        disabledDate: (time) => {
+                            if (this.filters.startTime != null) {
+                                var str = this.filters.startTime.replace(/-/g, '/');
+                                var date = new Date(str);
+                                return time.getTime() < date;
+                            }
+                        }
+                    },
+                    chartTitle: '',
+                    chartFactoryModel: '',
+                    activeName: 'first',
+                    price: 0,
+                    skuPlatformId: void 0,
+                    detailVisable: false,
+                    addVisable: false,
+                    loading: false,
+                    skuVisable: false,
+                    /*==初始化==*/
+                    /*==表格数据==*/
+                    dailyPricelist: [],
+                    dailyReviewData: [],
+                    itemList: [],
+                    filters: {
+                        key: '',
+                        itemId: 0,
+                        isValid: 0,
+                        platformIds: [],
+                        date: void 0,
+                        currentPage: 1,
+                        pageSize: 20,
+                        isOnly: true,
+                        sources: [],
+                        dateRange: [],
+                        startTime: void 0,
+                        endTime: void 0,
+                    },
+                    filters2: {
+                        key: '',
+                        itemId: 0,
+                        isValid: 0,
+                        type: 0,
+                        platformIds: [],
+                        date: void 0,
+                        currentPage: 1,
+                        pageSize: 999,
+                        isOnly: true,
+                        sources: [],
+                        dateRange: [],
+                        startTime: void 0,
+                        endTime: void 0,
+                    },
+                    itemDailyPriceForm: {
+                        id: 0,
+                        itemId: void 0,
+                        platformId: void 0,
+                        itemName: '',
+                        platformName: '',
+                        factoryModel: '',
+                        date: '',
+                        dateRange: [],
+                        price: 0,
+                        priceString: void 0,
+                        source: 0,
+                        src: "",
+                    },
+                    total: 0,
+                    total2: 0,
+                    page: 1,
+                    page2: 1,
+                    currentPage: 1,
+                    currentPage2: 1,
+                    pageSize: 10,
+                    pageSize2: 10,
+                    listLoading: false,
+                    skuListLoading: false,
+                    platformList: [],
+                    sourceList: [{ label: '未知', id: 0 }, { label: '接口', id: 1 }, { label: '爬虫', id: 2 }, { label: '人工录入', id: 3 }],
+                    nextSelect: false,
+                    searchList: [],
+                    searchItemList: [],
+                    searchAllList: [],
+                    chart:void 0
+
+                }
+            },
+            methods: {
+                refreshDictionary(path) {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: path,
+                        success: function (data) {
+                            if (data.code == 0) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '操作成功!',
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                chartSearch() {
+                    var _self = this;
+                    if (_self.filters2.key != null && _self.filters2.key != "") {
+                        _self.getChartDailyPriceList();
+                    }
+                    else {
+                        this.$message({
+                            type: 'warning',
+                            message: '图表需要填写指定名称或者型号'
+                        });
+                        return;
+                    }
+
+                },
+                toogleDataSeries(e) {
+                    if (typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+                        e.dataSeries.visible = false;
+                    } else {
+                        e.dataSeries.visible = true;
+                    }
+                    this.chart.render();
+                },
+                chartCreate(type) {
+                    //0评分1评论数
+                    var _self = this;
+                    var chartdata = {}
+                    if (type == 0) {
+                         chartdata = {
+                        animationEnabled: true,
+                        exportEnabled: true,
+                        theme: "light2",
+                        axisX: {
+                            valueFormatString: "DD MMM",
+                            crosshair: {
+                                enabled: true,
+                                snapToDataPoint: true
+                            },
+
+                        },
+                        axisY: {
+                            title: "Score",
+                            crosshair: {
+                                enabled: true
+                            },
+                            maximum: 5,
+                            includeZero: true,
+                            interval:1,
+                            valueFormatString: "#.0",
+                        },
+                        toolTip: {
+                            shared: true
+                        },
+                        legend: {
+                            cursor: "pointer",
+                            verticalAlign: "bottom",
+                            //horizontalAlign: "left",
+                            //dockInsidePlotArea: true,
+                            itemclick: _self.toogleDataSeries
+                        },
+                        data: []
+                    };
+                    } else {
+                         chartdata = {
+                        animationEnabled: true,
+                        exportEnabled: true,
+                        theme: "light2",
+                        axisX: {
+                            valueFormatString: "DD MMM",
+                            crosshair: {
+                                enabled: true,
+                                snapToDataPoint: true
+                            },
+
+                        },
+                        axisY: {
+                            title: "Review Count",
+                            crosshair: {
+                                enabled: true
+                            },
+                            includeZero: true,
+                            interval: 50,
+                            valueFormatString: "#",
+                        },
+                        toolTip: {
+                            shared: true
+                        },
+                        legend: {
+                            cursor: "pointer",
+                            verticalAlign: "bottom",
+                            //horizontalAlign: "left",
+                            //dockInsidePlotArea: true,
+                            itemclick: _self.toogleDataSeries
+                        },
+                        data: []
+                    };
+                    }
+                   
+                    if (_self.dailyReviewData.length > 0) {
+                        console.log(_self.dailyReviewData[0])
+                        _self.chartTitle = "产品名：" + _self.dailyReviewData[0].itemName;
+                        _self.chartFactoryModel = "工厂型号：" + _self.dailyReviewData[0].factoryModel;
+                    } else {
+                        _self.chartTitle = "";
+                        _self.chartFactoryModel = _self.filters2.key;
+                    }
+                    if (_self.filters.platformIds.length == 0) {
+                        for (var key in _self.platformList) {
+                            var item = {
+                                type: "stepLine",
+                                showInLegend: true,
+                                name: _self.platformList[key].ename,
+                                markerType: "square",
+                                //markerSize: 5,
+                                xValueFormatString: "DD MMM, YYYY",
+                                color: getColor(_self.platformList[key].id),
+                                dataPoints: []
+                            };
+                            for (var p in _self.dailyReviewData) {
+                                if (_self.dailyReviewData[p].platformId == _self.platformList[key].id) {
+                                    if (type == 0)
+                                        item.dataPoints.push({ x: new Date(_self.dailyReviewData[p].date.substring(0, 4), parseInt(_self.dailyReviewData[p].date.substring(5, 7)) - 1, _self.dailyReviewData[p].date.substring(8, 10)), y: parseFloat(_self.dailyReviewData[p].reviewScoreFloat) })
+                                    else
+                                        item.dataPoints.push({ x: new Date(_self.dailyReviewData[p].date.substring(0, 4), parseInt(_self.dailyReviewData[p].date.substring(5, 7)) - 1, _self.dailyReviewData[p].date.substring(8, 10)), y: parseFloat(_self.dailyReviewData[p].reviewCount) })
+
+                                }
+                            }
+                            chartdata.data.push(item);
+                        }
+                    } else {
+                        for (var key in _self.platformList) {
+                            if (_self.filters.platformIds.indexOf(_self.platformList[key].id) >= 0) {
+                                var item = {
+                                    type: "stepLine",
+                                    showInLegend: true,
+                                    name: _self.platformList[key].ename,
+                                    markerType: "square",
+                                    xValueFormatString: "DD MMM, YYYY",
+                                    color: getColor(_self.platformList[key].id),
+                                    dataPoints: []
+                                };
+                                for (var p in _self.dailyReviewData) {
+                                    if (_self.dailyReviewData[p].platformId == _self.platformList[key].id) {
+                                        if (type == 0)
+                                            item.dataPoints.push({ x: new Date(_self.dailyReviewData[p].date.substring(0, 4), parseInt(_self.dailyReviewData[p].date.substring(5, 7)) - 1, _self.dailyReviewData[p].date.substring(8, 10)), y: parseFloat(_self.dailyReviewData[p].reviewScoreFloat) })
+                                        else
+                                            item.dataPoints.push({ x: new Date(_self.dailyReviewData[p].date.substring(0, 4), parseInt(_self.dailyReviewData[p].date.substring(5, 7)) - 1, _self.dailyReviewData[p].date.substring(8, 10)), y: parseFloat(_self.dailyReviewData[p].reviewCount) })
+                                    }
+                                }
+                                chartdata.data.push(item);
+                            }
+
+                        }
+                    }
+
+                    _self.chart = new CanvasJS.Chart("chartContainer", chartdata);
+                    _self.chart.render();
+                },
+                remoteMethod(query) {
+                    if (query !== '') {
+                        this.loading = true;
+                        setTimeout(() => {
+                            this.loading = false;
+                            this.searchList = this.searchAllList.filter(item => {
+                                return item.value != null ? item.value.toLowerCase()
+                                    .indexOf(query.toLowerCase()) > -1 : [];
+                            });
+                        }, 200);
+                    } else {
+                        this.searchList = [];
+                    }
+                },
+                remoteMethod2(query) {
+                    if (this.itemDailyPriceForm.platformId == 0 || this.itemDailyPriceForm.platformId == undefined) {
+                        this.$message({
+                            type: 'error',
+                            message: '先选择平台'
+                        });
+                        return;
+                    }
+                    if (query !== '') {
+                        this.loading = true;
+                        setTimeout(() => {
+                            this.loading = false;
+                            this.searchItemList = this.itemList.filter(item => {
+                                return item.itemName != null ? (item.itemName.toLowerCase()
+                                    .indexOf(query.toLowerCase()) > -1 || item.factoryModel.toLowerCase().indexOf(query.toLowerCase()) > -1) : [];
+                            });
+                        }, 200);
+                    } else {
+                        this.searchItemList = [];
+                    }
+                },
+                getSearchAll() {
+                    var _self = this;
+                    $.ajax({
+                        //type: 'post',
+                        //dataType: 'json',
+                        //contentType: 'application/json',
+                        //url: '/rest/item/dailyprice/search/list',
+                        //data: JSON.stringify(_self.filters),
+                         type: 'get',
+                        //dataType: 'json',
+                        url: '/rest/item/dailyprice/search/list',
+                        data: _self.filters.key,
+                        success: function (data) {
+                            _self.searchAllList = data.data;
+                            _self.listLoading = false;
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                querySearch(queryString, cb) {
+                    var _self = this;
+                    $.ajax({
+                         type: 'get',
+                        //dataType: 'json',
+                        url: '/rest/item/dailyprice/search/list',
+                        data: _self.filters.key,
+                        success: function (data) {
+                            cb(data.data);
+                            _self.listLoading = false;
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                handleSelect(item) {
+                },
+                platformChange() {
+                    this.searchItemList = [];
+                    this.itemDailyPriceForm.itemName = '';
+                    this.itemDailyPriceForm.factoryModel = '';
+                    this.itemDailyPriceForm.itemId = '';
+                    this.itemDailyPriceForm.src = '';
+                    this.getItemIncludeList();
+                },
+                itemChange() {
+                    var _self = this;
+                    var model = this.itemList.filter(item => item.itemName == _self.itemDailyPriceForm.itemName);
+                    if (model.length > 0) {
+                        _self.itemDailyPriceForm.itemId = model[0].id;
+                        _self.itemDailyPriceForm.factoryModel = model[0].factoryModel;
+                        _self.itemDailyPriceForm.platformName = model[0].platformName;
+                        _self.itemDailyPriceForm.src = model[0].src;
+
+                    }
+                },
+                openAddForm() {
+                    var _self = this;
+                    _self.addVisable = true;
+                    _self.nextSelect = false;
+                    _self.itemDailyPriceForm.id = 0;
+                    _self.itemDailyPriceForm.itemId = void 0;
+                    _self.itemDailyPriceForm.platformId = void 0;
+                    _self.itemDailyPriceForm.itemName = '';
+                    _self.itemDailyPriceForm.platformName = '';
+                    _self.itemDailyPriceForm.factoryModel = '';
+                    _self.itemDailyPriceForm.date = void 0;
+                    _self.itemDailyPriceForm.source = 3;
+                    _self.itemDailyPriceForm.price = 0;
+                    _self.itemDailyPriceForm.priceString = void 0;
+                    _self.itemDailyPriceForm.src = '';
+                },
+                //【获取平台下商品】
+                getItemIncludeList() {
+                    var _self = this;
+                    _self.skuListLoading = true;
+                    var id = 0;
+                    if (_self.itemDailyPriceForm.platformId == "" || _self.itemDailyPriceForm.platformId == null) {
+                        id = 0;
+                    } else {
+                        id = _self.itemDailyPriceForm.platformId;
+                    }
+                    $.ajax({
+                        type: 'GET',
+                        //dataType: 'json',
+                        url: '/rest/item/platform/list',
+                        data: { platformId: id, key: null, itemId: 0, pageSize: 999, currentPage: _self.page2, status: 0 },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total2 = data.page.totalCount;
+                                _self.itemList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                            _self.skuListLoading = false;
+
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.skuListLoading = false;
+
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                getPlatformList() {
+                    var _self = this;
+                    _self.listLoading = true;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        url: '/rest/item/platform/list',
+                        success: function (data) {
+                            _self.platformList = data.data;
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.listLoading = false;
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                openDetail(row) {
+                    var _self = this;
+                    _self.detailVisable = true;
+                    _self.itemDailyPriceForm = Object.assign({}, row);
+                },
+                //【查询】
+                search: function () {
+                    this.filters.currentPage = 1;
+                    this.getDailyPriceList();
+                },
+                //【获取价格列表】
+                getDailyPriceList: function () {
+                    this.listLoading = true;
+                    var _self = this;
+                    $.ajax({
+                         type: 'post',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/item/dailyprice/list',
+                        //url: '/rest/item/dailyreview/list',
+                        data: JSON.stringify(_self.filters),
+                        success: function (data) {
+                            _self.total = data.page.totalCount;
+                            _self.dailyPricelist = data.data;
+                            // _self.dailyReviewData = data.data.list;
+                            _self.listLoading = false;
+                            //if (_self.filters.key != null && _self.filters.key != "") {
+                            //    _self.dailyReviewData = data.data.list;
+                            //    _self.dailyReviewData.sort(function (a, b) {
+                            //        return Date.parse(a.date) - Date.parse(b.date);//时间正序
+                            //    });
+                            //    _self.chartCreate();
+                            //}
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.listLoading = false;
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //【获取图表价格数据】
+                getChartDailyPriceList: function () {
+                    var _self = this;
+                    _self.loading = true;
+                    $.ajax({
+                          type: 'post',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/item/dailyprice/list',
+                        //url: '/rest/item/dailyreview/list',
+                        data: JSON.stringify(_self.filters2),
+                        success: function (data) {
+                            _self.loading = false;
+                            //_self.dailyPriceDate = data.data.list;
+                            if (_self.filters2.key != null && _self.filters2.key != "") {
+                                _self.dailyReviewData = data.data;
+                                _self.dailyReviewData.sort(function (a, b) {
+                                    return Date.parse(a.date) - Date.parse(b.date);//时间正序
+                                });
+                                _self.chartCreate(_self.filters2.type);
+                            }
+                            //_self.chartCreate();
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.loading = false;
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                savePrice() {
+                    var _self = this;
+                    if (_self.itemDailyPriceForm.id > 0) {
+                        $.ajax({
+                            type: 'post',
+                            dataType: 'json',
+                            url: '../../rest/item/dailyprice/update',
+                            data: _self.itemDailyPriceForm,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.detailVisable = false;
+                                    _self.addVisable = false;
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '成功!'
+                                    });
+                                    _self.getDailyPriceList();
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        if (_self.itemDailyPriceForm.itemName == ""
+                            || _self.itemDailyPriceForm.platformId == 0 || _self.itemDailyPriceForm.platformId == undefined
+                            || _self.itemDailyPriceForm.itemId == 0 || _self.itemDailyPriceForm.itemId == undefined
+                            || _self.itemDailyPriceForm.priceString == "" || _self.itemDailyPriceForm.priceString == undefined
+                            || _self.itemDailyPriceForm.date == undefined) {
+                            _self.$message({
+                                type: 'error',
+                                message: '信息不全,无法保存'
+                            });
+
+                            console.log(_self.itemDailyPriceForm)
+                            return;
+                        }
+                        //console.log(_self.itemDailyPriceForm)
+                        //return;
+                        $.ajax({
+                            type: 'post',
+                            dataType: 'json',
+                            url: '../../rest/item/dailyprice/add',
+                            data: _self.itemDailyPriceForm,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '成功!'
+                                    });
+                                    _self.detailVisable = false;
+                                    _self.addVisable = false;
+                                    _self.getDailyPriceList();
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }
+
+                },
+                //改变每页显示数据条数
+                handleSizeChange(val) {
+                    this.filters.pageSize = val;
+                    this.pageSize = val;
+                    this.getDailyPriceList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.currentPage = val;
+                    this.filters.currentPage = val;
+                    this.getDailyPriceList();
+                },
+            },
+            //html渲染前
+            created() {
+                var _self = this;
+
+                _self.filters.dateRange.push(dateFormatter(new Date(), false))
+                _self.filters.dateRange.push(dateFormatter(new Date(), false))
+                _self.filters2.dateRange.push(dateFormatter(new Date(), false))
+                _self.filters2.dateRange.push(dateFormatter(new Date(), false))
+
+
+                _self.getPlatformList();
+                _self.getSearchAll();
+                //}
+            },
+            mounted() {
+
+            }
+        })
+
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+        //function toogleDataSeries(e) {
+        //    if (typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+        //        e.dataSeries.visible = false;
+        //    } else {
+        //        e.dataSeries.visible = true;
+        //    }
+        //    this.chart.render();
+        //}
+        function getColor(id) {
+            console.log(name)
+            switch (id) {
+                case 1:
+                    return "#F08080";
+                    break;
+                case 2:
+                    return "#EEDC82";
+
+                    break;
+                case 3:
+                    return "#D1D1D1";
+
+                    break;
+                case 4:
+                    return "#B3EE3A";
+
+                    break;
+                case 5:
+                    return "#4876FF";
+
+                    break;
+                case 6:
+                    return "#9370DB";
+
+                    break;
+                case 7:
+                    return "#96CDCD";
+
+                    break;
+                case 8:
+                    return "#8B864E";
+
+                    break;
+                case 9:
+                    return "#483D8B";
+
+                    break;
+            }
+        }
+        function dateFormatter(str) {//默认返回yyyy-MM-dd HH-mm-ss
+            var hasTime = arguments[1] != false ? true : false;//可传第二个参数false，返回yyyy-MM-dd
+            var d = new Date(str);
+            var year = d.getFullYear();
+            var month = (d.getMonth() + 1) < 10 ? '0' + (d.getMonth() + 1) : (d.getMonth() + 1);
+            var day = d.getDate() < 10 ? '0' + d.getDate() : d.getDate();
+            var hour = d.getHours() < 10 ? '0' + d.getHours() : d.getHours();
+            var minute = d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes();
+            var second = d.getSeconds() < 10 ? '0' + d.getSeconds() : d.getSeconds();
+            if (hasTime) {
+                return [year, month, day].join('-') + " " + [hour, minute, second].join(':');
+            } else {
+                return [year, month, day].join('-');
+            }
+        }
+
+    </script>
+
+
+}
+

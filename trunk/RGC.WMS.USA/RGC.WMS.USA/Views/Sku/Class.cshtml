@@ -1,0 +1,772 @@
+﻿
+@{
+                /**/
+
+                ViewBag.Title = "Class";
+}
+<style>
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        text-align: center;
+        vertical-align: middle;
+        line-height: 16px;
+        position: relative;
+        margin: 8px;
+    }
+
+        input[type="checkbox"]::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #fff;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #d9d9d9
+        }
+
+        input[type="checkbox"]:checked::before {
+            content: "\2713";
+            background-color: #fff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            border: 1px solid #6fc469;
+            color: #6fc469;
+            font-size: 16px;
+            font-weight: bold;
+        }
+</style>
+<body class="plr20">
+    <div id="wrapper">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>Sku管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>SKU分类</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+
+        <el-row>
+            <el-col :span="10">
+                <div>
+                    <el-tree :data="classlist"
+                             :props="defaultProps"
+                             node-key="id"
+                             default-expand-all
+                             :render-content="renderContent">
+                    </el-tree>
+                </div>
+                <!--编辑界面-->
+                <el-dialog title="编辑" :visible.sync="editFormVisible" :close-on-click-modal="false" width="50%">
+                    <el-form :model="editForm" size="small" inline class="mt20" label-width="150px" :rules="editFormRules" ref="editForm">
+                        <el-form-item label="英文名" prop="eName">
+                            <el-input v-model="editForm.eName" auto-complete="off"></el-input>
+                        </el-form-item>
+                        <el-form-item label="中文名" prop="cName">
+                            <el-input v-model="editForm.cName" auto-complete="off"></el-input>
+                        </el-form-item>
+                        <el-form-item label="排序" prop="showOrder">
+                            <el-input v-model="editForm.showOrder" auto-complete="off"></el-input>
+                        </el-form-item>
+                        <el-form-item label="编码" prop="code">
+                            <el-input v-model="editForm.code" auto-complete="off"></el-input>
+                        </el-form-item><br/>
+                        <el-form-item label="前台是否显示" prop="isShow">
+                            <el-checkbox v-model="editForm.isShow"></el-checkbox>
+                        </el-form-item><br />
+                        <el-form-item label="主图上传(1080*1080)">
+                            <el-upload class="m-t-10 avatar-uploader"
+                                       action=""
+                                       :show-file-list="false"
+                                       :on-success="handleSuccess">
+                                <img v-if="srcFull" :src="srcFull" class="avatar" height="200">
+                                <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                            </el-upload>
+                        </el-form-item>
+                    </el-form>
+                    <div slot="footer" class="dialog-footer">
+                        <el-button size="small" v-on:click.native="editFormVisible = false">取消</el-button>
+                        <el-button size="small" type="primary" v-on:click="editSubmit" :loading="editLoading">确定</el-button>
+                    </div>
+                </el-dialog>
+            </el-col>
+            <el-col :span="13" :offset="1">
+                <el-button size="small" v-on:click="getSkuExludeList" icon="el-icon-plus" type="primary">添加Sku</el-button><span>【{{checkName}}】</span>
+                <el-table :data="skuForm.items" size="small" highlight-current-row v-loading="listLoading" style="width: 100%;margin-top:10px;">
+                    <el-table-column type="index" width="60"></el-table-column>
+                    <el-table-column prop="id" label="id" width="60"></el-table-column>
+                    <el-table-column min-width="180" prop="fullEName" label="商品名">
+                        <template slot-scope="scope">
+                            <!--鼠标滑过，显示图片-->
+                            <el-popover placement="right"
+                                        trigger="hover">
+                                <img :src="scope.row.primaryImageSrcFull" class="pimg" alt="no image" v-if="scope.row.primaryImageSrcFull!=''" width="250">
+                                <i slot="reference">{{scope.row.fullEName}}</i>
+                            </el-popover>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="factoryModel" label="型号"></el-table-column>
+                    <el-table-column label="操作" width="110">
+                        <template slot-scope="scope">
+                            <el-button size="mini" icon="el-icon-edit" v-on:click="openEditSkuClass(scope.row)">修改分类</el-button>
+                        </template>
+
+                    </el-table-column>
+                </el-table>
+
+                <el-col :span="24" class="toolbar">
+                    <el-pagination layout="prev, pager, next" small :page-size="10" :total="total2" style="float:right;" v-on:current-change="handleCurrentChange2"></el-pagination>
+                </el-col>
+            </el-col>
+        </el-row>
+        <!--商品界面-->
+        <el-dialog title="添加Sku" :visible.sync="skuFormVisible" :close-on-click-modal="false" width="60%">
+            <span>【{{checkName}}】</span>
+            <el-row class="mt10">
+                <article class="search">
+                    <section>
+                        <el-input placeholder="关键字搜索" size="mini" v-model="filters.searchKey"
+                                  v-on:keyup.enter.native="getSkuExludeList()" style="width:250px" clearable></el-input>
+                        <el-button v-on:click="searchProduct" size="mini" icon="el-icon-search">搜索</el-button>
+                    </section>
+                </article>
+            </el-row>
+
+            <el-table :data="skuForm2.items" size="small" highlight-current-row v-loading="listLoading" style="width: 100%;margin-top:10px;">
+                <el-table-column type="index" width="60"></el-table-column>
+                <el-table-column prop="id" label="id" width="60"></el-table-column>
+                <el-table-column min-width="380" prop="fullEName" label="商品名">
+                    <template slot-scope="scope">
+                        <!--鼠标滑过，显示图片-->
+                        <el-popover placement="right"
+                                    trigger="hover">
+                            <img :src="scope.row.primaryImageSrcFull" class="pimg" alt="no image" v-if="scope.row.primaryImageSrcFull!=''" width="250">
+                            <i slot="reference">{{scope.row.fullEName}}</i>
+                        </el-popover>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="factoryModel" label="型号"></el-table-column>
+                <el-table-column label="操作" width="80" fixed="right">
+                    <template slot-scope="scope">
+                        <el-button size="mini" v-on:click="add(scope.$index, scope.row)">添 加</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+
+            <div class="tr mt10">
+                <el-pagination layout="prev, pager, next" small :page-size="10" :total="total" v-on:current-change="handleCurrentChange"></el-pagination>
+            </div>
+        </el-dialog>
+
+        <!--商品界面-->
+        <el-dialog title="修改分类" :visible.sync="editSkuClassVisible" :close-on-click-modal="false">
+            <el-cascader expand-trigger="hover"
+                         :options="cascader"
+                         v-model="categoryIds"
+                          size="small"
+                         class="minw250 mb30">
+            </el-cascader>
+            <el-button type="primary" class="mb30" size="small" v-on:click="editSkuClass()">保 存</el-button>
+        </el-dialog>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    categoryIds: [],
+                    cascader: [],
+                    classlist: [],//菜单列表
+                    defaultProps: {
+                        children: 'child',
+                        label: 'eName'
+                    },
+                    editSkuClassVisible: false,
+                    /*==编辑界面==*/
+                    editFormVisible: false,//是 否显示
+                    editLoading: false,
+                    editFormRules: {
+                        eName: [
+                            { required: true, message: '请输入英文名', trigger: 'blur' }
+                        ],
+                        // cName:[{ required: true, message: '请输入中文名称', trigger: 'blur' }]
+                    },
+                    editForm: {
+                        id: '',
+                        eName: '',
+                        cName: '',
+                        code: '',
+                        showOrder: '',
+                        isShow: false,
+                        byteStr: '',
+                        srcFull: '',
+                        src: ''
+                    },
+                    srcFull: '',
+                    //分页
+                    total: 0,
+                    total2: 0,
+                    page: 1,
+                    page2: 1,
+                    //商品界面
+                    items: [],
+                    checkName: '未选中类别',
+                    listLoading: false,
+                    skuFormVisible: false,
+                    skuForm: {
+                        items: [],
+                        id: '',
+                        classCode: '',
+                        check: ''
+                    },
+                    skuForm2: {
+                        items: [],
+                        id: '',
+                        classCode: '',
+                        check: ''
+                    },
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0
+                    },
+                }
+            },
+            methods: {
+                searchProduct() {
+                    this.page = 1;
+                    this.getSkuExludeList();
+                },
+                handleSuccess(res, file, fileList) {
+                    var _self = this;
+                    var url = URL.createObjectURL(file.raw);
+                    _self.editForm.srcFull = url;
+                    _self.srcFull = url;
+                    var reader = new FileReader();
+                    reader.readAsDataURL(file.raw);
+                    reader.onload = function (e) {
+                        _self.editForm.byteStr = e.target.result;
+
+                    };
+                },
+                //【获取菜单列表】
+                GetClassTree() {
+                    var _self = this;
+                    var list = new Array({ "id": 0, "eName": "全部分类", "showOrder": 1, "parentId": 0, "child": [] });
+                    _self.classlist = list;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        async: false,
+                        url: '../../rest/category/list',
+                        success: function (data) {
+                            if (data.success == true) {
+                                list = new Array({ "id": 0, "eName": "全部分类", "showOrder": 1, "parentId": 0, "child": data.data });
+                                _self.classlist = list;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getSkuExludeList();
+                },
+                handleCurrentChange2(val) {
+                    this.page2 = val;
+                    this.getSkuIncludeList();
+                },
+                //【获取非该分类下商品】
+                getSkuExludeList() {
+                    var _self = this;
+                    if (_self.skuForm.id != "") {
+                        _self.skuFormVisible = true;
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            url: '../../rest/sku/category/otherList',
+                            data: { categoryId: _self.skuForm.id, key: _self.filters.searchKey, pageSize: 10, currentPage: _self.page },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.total = data.data.page.totalCount;
+                                    _self.skuForm2.items = data.data.list;
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    else {
+                        alert("未选中任何类别！");
+                    }
+
+                },
+                getCategoryCasCader() {
+                    var $this = this;
+                    $.ajax({
+                        type: 'Get',
+                        url: '../../rest/category/cascader',
+                        success: function (data) {
+                            if (data.success == true) {
+                                $this.cascader = data.data;
+                            } else {
+                                $this.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                $this.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                $this.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //【获取分类下商品】
+                getSkuIncludeList() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        url: '../../rest/sku/category/list',
+                        data: { categoryId: _self.skuForm.id, key: null, pageSize: 10, currentPage: _self.page2 },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total2 = data.data.page.totalCount;
+                                _self.skuForm.items = data.data.list;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                openEditSkuClass(row) {
+                    var _self = this;
+                    _self.editSkuClassVisible = true;
+                    _self.categoryIds = row.categoryIds;
+                    _self.skuId = row.id;
+                    _self.getCategoryCasCader();
+                },
+                editSkuClass() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        url: '../../rest/sku/add_category',
+                        data: { categoryId: _self.categoryIds[_self.categoryIds.length - 1], skuId: _self.skuId },
+                        success: function (data) {
+                            if (data.success) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '成功!'
+                                });
+                                _self.editSkuClassVisible = false;
+                                _self.getSkuIncludeList();
+                            }
+                            else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //分类添加商品
+                add(index, row) {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        url: '../../rest/sku/add_category',
+                        data: { categoryId: _self.skuForm.id, skuId: row.id },
+                        success: function (data) {
+                            if (data.success) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '成功!'
+                                });
+                                _self.getSkuExludeList();
+                                _self.getSkuIncludeList();
+                            }
+                            else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+
+                //【渲染树】
+                renderContent(createElement, { node, data, store }) {
+                    var _self = this;
+                    var noeditdel = false;//没有编辑和删除按钮
+                    var noadd = false;//有新增按钮
+                    if (data.id == 0) { noeditdel = true; }
+                    if (node.level > 3) { noadd = true; }
+                    var elementHtml = createElement('span', [
+                        createElement('input', {
+                            attrs: {
+                                type: "checkbox",
+                                checked: data.isShow,
+                                disabled: true,
+                                style: node.level > 1 ? "" : "display:none"
+                            }
+                        }),
+                        createElement('span', node.label),
+                        createElement('span', {
+                            attrs: {
+                                style: "position: absolute;right: 10px;top: 3px;"
+                            }
+                        }, [
+                                createElement('el-button', {
+                                    attrs: {
+                                        size: "mini",
+                                        disabled: noadd,
+                                        type: "primary",
+                                        icon: "el-icon-plus",
+                                        circle: true,
+                                        title: "添加分类",
+                                        plain: true,
+                                    }, on: {
+                                        click: function () {
+                                            cancelBubble();
+                                            _self.editFormVisible = true;
+                                            _self.editForm.isShow = false;
+                                            _self.editForm.id = 0;
+                                            _self.editForm.eName = "";
+                                            _self.editForm.cName = "";
+                                            _self.editForm.showOrder = "";
+                                            _self.editForm.code = '';
+                                            _self.editForm.image = "";
+                                            _self.editForm.parentId = data.id;
+                                            _self.editForm.srcFull = "";
+                                            _self.editForm.src = "";
+                                            _self.srcFull = "";
+                                            _self.editForm.byteStr = "";
+                                        }
+                                    }
+                                }),
+                                createElement('el-button', {
+                                    attrs: {
+                                        size: "mini",
+                                        disabled: noeditdel,
+                                        style: node.level > 1 ? "" : "display:none",
+                                        type: "warning",
+                                        icon: "el-icon-edit",
+                                        circle: true,
+                                        title: "编辑",
+                                        plain: true,
+                                    }, on: {
+                                        click: function () {
+                                            cancelBubble();
+                                            _self.editFormVisible = true;
+                                            _self.editForm.isShow = data.isShow;
+                                            _self.editForm.id = data.id;
+                                            _self.editForm.eName = data.eName;
+                                            _self.editForm.cName = data.cName;
+                                            _self.editForm.code = data.code;
+                                            _self.editForm.showOrder = data.showOrder;
+                                            _self.editForm.image = data.imgUrl;
+                                            _self.editDefaultImage = data.imgUrl;
+                                            _self.editForm.parentId = data.parentId;
+                                            _self.srcFull = data.srcFull;
+                                            _self.editForm.srcFull = data.srcFull;
+                                            _self.editForm.src = data.src;
+                                        }
+                                    }
+                                }),
+                                createElement('el-button', {
+                                    attrs: {
+                                        size: "mini",
+                                        disabled: noeditdel,
+                                        plain: true,
+                                        type: "danger",
+                                        style: node.level > 1 ? "" : "display:none",
+                                        icon: "el-icon-delete",
+                                        circle: true,
+                                        title: "删除"
+                                    }, on: {
+                                        click: function () {
+                                            cancelBubble();
+                                            _self.removeSubmit(store, data);
+                                        }
+                                    }
+                                }),
+                                createElement('el-button', {
+                                    attrs: {
+                                        size: "mini",
+                                        disabled: noeditdel,
+                                        plain: true,
+                                        style: node.level > 1 ? "" : "display:none",
+                                        icon: "el-icon-search",
+                                        circle: true,
+                                        title: "查看Sku"
+                                    }, on: {
+                                        click: function () {
+                                            cancelBubble();
+                                            _self.skuForm.id = data.id;
+                                            _self.categoryIds = [];
+                                            _self.skuId = 0;
+                                            _self.getSkuIncludeList();
+                                            _self.checkName = node.label;
+
+                                        }
+                                    }
+                                }),
+                            ]),
+                    ]);
+                    return elementHtml;
+                },
+
+                //【编辑表单提交】
+                editSubmit() {
+                    var _self = this;
+                    _self.$refs.editForm.validate((valid) => {
+                        if (valid) {
+                            _self.editLoading = true;
+                            //新增
+                            if (_self.editForm.id == 0) {
+                                $.ajax({
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    url: '../../rest/category/create',
+                                    data: _self.editForm,
+                                    success: function (data) {
+                                        _self.editLoading = false;
+                                        _self.editFormVisible = false;
+                                        if (data.success) {
+                                            _self.$message({
+                                                type: 'success',
+                                                message: '新增成功!'
+                                            });
+                                            _self.GetClassTree();
+                                        }
+                                        else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: data.msg
+                                            });
+                                        }
+                                    },
+                                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                        if (errorThrown == "Unauthorized") {
+                                            window.parent.MainIndex.openLoginFrom();
+                                            _self.$message({
+                                                type: 'error',
+                                                message: XMLHttpRequest.responseJSON.msg
+                                            });
+                                        } else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: errorThrown
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                            //编辑
+                            else {
+                                $.ajax({
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    url: '../../rest/category/update',
+                                    data: _self.editForm,//{ id: _self.editForm.id, eName: _self.editForm.eName, cName: _self.editForm.cName, showOrder:_self.editForm.showOrder, code: _self.editForm.code, parentId:_self.editForm.parentId },
+                                    success: function (data) {
+                                        _self.editLoading = false;
+                                        _self.editFormVisible = false;
+                                        if (data.success) {
+                                            _self.$message({
+                                                type: 'success',
+                                                message: '编辑成功!'
+                                            });
+                                            _self.GetClassTree();
+                                        }
+                                        else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: data.msg
+                                            });
+                                        }
+                                    },
+                                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                        if (errorThrown == "Unauthorized") {
+                                            window.parent.MainIndex.openLoginFrom();
+                                            _self.$message({
+                                                type: 'error',
+                                                message: XMLHttpRequest.responseJSON.msg
+                                            });
+                                        } else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: errorThrown
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    })
+                },
+
+                //【菜单树 操作】
+                removeSubmit(store, data) {
+                    this.$confirm('确定删除该菜单吗?', '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        this.listLoading = true;
+                        var _self = this;
+
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            async: false,
+                            url: '../../rest/category/delete?id=' + data.id,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '删除成功!'
+                                    });
+                                    _self.GetClassTree();
+                                    _self.listLoading = false;
+                                    _self.skuForm.items = [];
+                                    _self.checkName = '未选中类别';
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+
+
+                    }).catch(() => {
+
+                    });
+                },
+            },
+            mounted() {
+                this.GetClassTree();
+            }
+        }
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#wrapper');
+    </script>
+
+</body>

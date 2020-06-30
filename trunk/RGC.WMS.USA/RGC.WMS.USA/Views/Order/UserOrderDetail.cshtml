@@ -1,0 +1,205 @@
+﻿@*  用户列表页
+    创建 jerry 2020/01/21
+*@
+@{
+    ViewData["Title"] = "UserOrderList";
+}
+@section css{
+    <link href="/manage-resources/Views/Administration/user.css" rel="stylesheet" />
+}
+<div id="userlist" class="p15 bac01 h100b bsb">
+    <el-card class="el-card--plr">
+        <el-row class="toolbar toolbar--top">
+            <el-col :span="6" v-if="@ViewBag.userId != 0">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>客户服务</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>客户订单详情</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+            <el-col :span="6" v-if="@ViewBag.userId == 0">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>订单管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>订单详情</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-form :inline="true" :model="orderInfo" ref="order" label-width="300px" class="skuform" label-position="right" size="mini" disabled>
+            <el-tabs v-model="activeName" type="card">
+                <el-tab-pane label="基本订单信息" name="first">
+                    <el-form-item label="订单编号" prop="orderNumber">
+                        <el-input v-model="orderInfo.orderNumber" class="w180" />
+                    </el-form-item>
+                    <el-form-item label="下单时间" prop="orderTimeString">
+                        <el-input v-model="orderInfo.orderTimeString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="订单状态" prop="orderStatusString">
+                        <el-input v-model="orderInfo.orderStatusString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="客户姓名">
+                        <el-input v-model.trim="orderInfo.userName" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="客户邮箱">
+                        <el-input v-model.trim="orderInfo.userEmail" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="支付类型">
+                        <el-input v-model.trim="orderInfo.paymentTypeString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="支付时间">
+                        <el-input v-model.trim="orderInfo.paymentTimeString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="商品总价">
+                        <el-input v-model.trim="orderInfo.totalAmountString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="运费">
+                        <el-input v-model.trim="orderInfo.shippingAmountString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="税费">
+                        <el-input v-model.trim="orderInfo.taxAmountString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="支付金额">
+                        <el-input v-model.trim="orderInfo.paymentAmountString" class="w180"></el-input>
+                    </el-form-item>
+                    <el-form-item label="退款金额">
+                        <el-input v-model.trim="orderInfo.returnAmountString" class="w180"></el-input>
+                    </el-form-item>
+                    @*<el-row>
+                            <el-form-item label="订单备注">
+                                <el-input v-model="orderInfo.remarks" type="textarea" :rows="4" class="w180" />
+                            </el-form-item>
+                        </el-row>*@
+                    <el-row>
+                        <el-form-item label="运输地址">
+                            <el-card>
+                                <div class="card_item">名字：{{ orderInfo.shipToFullName }}</div>
+
+                                <div class="card_item">公司：{{ orderInfo.shipToCompanyName }}</div>
+                                <div class="card_item">地址1：{{ orderInfo.shipToAddress1 }}</div>
+                                <div class="card_item">地址2：{{ orderInfo.shipToAddress2 }}</div>
+                                <div class="card_item">城市：{{ orderInfo.shipToCity }}</div>
+                                <div class="card_item">洲：{{ orderInfo.shipToState }}</div>
+                                <div class="card_item">国家：{{ orderInfo.shipToCountry }}</div>
+                                <div class="card_item">邮编：{{ orderInfo.shipToZipCode }}</div>
+                                <div class="card_item">电话：{{ orderInfo.shipToPhoneNumber }}</div>
+                            </el-card>
+                        </el-form-item>
+                    </el-row>
+                    <el-row>
+                        <el-form-item label="账单地址">
+                            <el-card>
+                                <div class="card_item">名字：{{ orderInfo.billToFullName }}</div>
+
+                                <div class="card_item">公司：{{ orderInfo.billToCompanyName }}</div>
+                                <div class="card_item">地址1：{{ orderInfo.billToAddress1 }}</div>
+                                <div class="card_item">地址2：{{ orderInfo.billToAddress2 }}</div>
+                                <div class="card_item">城市：{{ orderInfo.billToCity }}</div>
+                                <div class="card_item">洲：{{ orderInfo.billToState }}</div>
+                                <div class="card_item">国家：{{ orderInfo.billToCountry }}</div>
+                                <div class="card_item">邮编：{{ orderInfo.billToZipCode }}</div>
+                                <div class="card_item">电话：{{ orderInfo.billToPhoneNumber }}</div>
+                            </el-card>
+                        </el-form-item>
+                    </el-row>
+
+                </el-tab-pane>
+                <el-tab-pane label="产品列表" name="second">
+                    <el-card class="box-card" shadow="none">
+                        <span slot="header" class="step-jump pr" id="item_list">
+                            <i class="tip-tit"><i class="pr z-in2 pl10">产品列表 Order Items</i></i>
+                        </span>
+                        <el-table :data="orderInfo.itemList" size="mini" :height="height_table" highlight-current-row v-loading="itemListLoading">
+                            <el-table-column prop="id" label="ID" width="50"></el-table-column>
+                            <el-table-column prop="orderNumber" label="订单编号" width="180"></el-table-column>
+                            <el-table-column prop="itemName" label="产品名称" width="280"></el-table-column>
+                            <el-table-column prop="itemFactoryModel" label="产品型号"></el-table-column>
+                            <el-table-column prop="qty" label="数量"></el-table-column>
+                            <el-table-column prop="unitPriceString" label="单价($)"></el-table-column>
+                            <el-table-column prop="grossWeight" label="毛重(LB)"></el-table-column>
+                            @*<el-table-column width="220" label="操作">
+                                    <template slot-scope="scope">
+                                        <el-dropdown trigger="click" size="small">
+                                            <el-button type="primary" size="mini" class="mb5">
+                                                操作
+                                                <i class="el-icon-caret-bottom el-icon--right"></i>
+                                            </el-button>
+                                            <el-dropdown-menu slot="dropdown">
+                                                <el-dropdown-item>
+                                                    <div v-on:click="openOrderItemDetail(scope.row.id)">查看详情</div>
+                                                </el-dropdown-item>
+                                            </el-dropdown-menu>
+                                        </el-dropdown>
+                                    </template>
+                                </el-table-column>*@
+                        </el-table>
+
+                    </el-card>
+                </el-tab-pane>
+
+            </el-tabs>
+        </el-form>
+
+    </el-card>
+
+</div>
+<script>
+    var main = {
+        data() {
+            return {
+                activeName: "first",
+                orderInfo: {},
+                orderLoading: false,
+
+                height_table: 650,//表格高度
+                // 分页
+                total: 0,
+                currentPage: 1,
+                pageSize: 10,
+                itemListLoading: false,//表格loading
+                selectList: [],
+
+
+            }
+        },
+        methods: {
+
+
+            getOrderDetail() {
+                var _self = this;
+                //_self.itemListLoading = true;
+                var filter = {};
+                filter.id =@ViewBag.orderId;
+
+                $.ajax({
+                    type: 'GET',
+                    //dataType: 'json',
+                    //contentType: 'application/json',
+                    url: '/rest/manage/order/detail?orderId=@ViewBag.orderId',
+                    //data: JSON.stringify(filter),
+                    success: function (data) {
+                        _self.orderInfo = data.data;
+                        //_self.itemListLoading = false;
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (XMLHttpRequest.status == 401 || errorThrown == "Unauthorized") {
+                            window.parent.Main.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                        //_self.itemListLoading = false;
+                    }
+                });
+            }
+        },
+        created() {
+            this.getOrderDetail();
+        }
+    };
+    var Ctor = Vue.extend(main)
+    new Ctor().$mount('#userlist')
+</script>

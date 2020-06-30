@@ -1,0 +1,612 @@
+﻿
+@{
+    /**/
+
+    ViewBag.Title = "List";
+}
+
+<body class="plr20">
+    <div id="skustocklist">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>产品管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>Sku库存列表</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <article class="administration-tenant-container">
+            <!--搜索-->
+            <el-col :span="24" class="toolbar">
+                <el-form :inline="true" size="small" :model="filters" v-on:submit.native.prevent>
+                    <el-form-item>
+                        <el-input placeholder="搜索" v-model="filters.searchKey"
+                                  v-on:keyup.enter.native="getSkuStockList()" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button v-on:click="search" icon="el-icon-search">搜索</el-button>
+                        <el-button v-on:click="add" icon="el-icon-plus" type="primary">添加Sku库存</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+            <el-table class="data-table" v-loading="listLoading" :data="skuStockList" :fit="true" border size="small">
+                <el-table-column min-width="40" prop="id" label="ID">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.id}}</i>
+                    </template>
+                </el-table-column>
+
+                <el-table-column min-width="200" prop="fullEName" label="产品名">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.sku.fullEName}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="150" prop="factoryModel" label="工厂型号">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.sku.factoryModel}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="120" label="图片" align="center">
+                    <template slot-scope="scope">
+                        <img v-if="scope.row.sku.primaryImageSrcFull" class="pimg" alt="no image" :src="scope.row.sku.primaryImageSrcFull" height="50">
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="100" prop="batchNo" label="批次号">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.batchNo}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="WarehouseId" label="仓库" width="90">
+                    <template slot-scope="scope">
+                        <el-tag size="small" v-if="scope.row.warehouseId > 0">{{scope.row.warehouse.number}}</el-tag>
+                        <el-tag size="small" v-if="scope.row.warehouseId <= 0">未设置</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="80" prop="currentStock" label="现货库存">
+                </el-table-column>
+                <el-table-column min-width="90" prop="lockStock" label="不可售库存">
+                </el-table-column>
+                <el-table-column min-width="80" prop="onWayStock" label="在途库存">
+                </el-table-column>
+                <el-table-column min-width="80" prop="orderStock" label="预占库存">
+                </el-table-column>
+                <el-table-column min-width="70" prop="safeStock" label="安全库存">
+                </el-table-column>
+                <el-table-column min-width="50" prop="lowStock" label="低库存">
+                </el-table-column>
+                <el-table-column min-width="130" prop="lastModificationTimeString" label="上次修改时间">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.lastModificationTimeString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="60" prop="creatorUser" label="创建人">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.creatorUser}}</i>
+                    </template>
+                </el-table-column>
+
+                <el-table-column width="100" label="操作">
+                    <template slot-scope="scope">
+                        <el-dropdown trigger="click">
+                            <el-button type="primary" size="mini" class="mb5">
+                                操作
+                                <i class="el-icon-caret-bottom el-icon--right"></i>
+                            </el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item>
+                                    <div v-on:click="edit(scope.row)">修 改</div>
+                                </el-dropdown-item>
+                                @*<el-dropdown-item>
+                                        <div v-on:click="detail(scope.row.id)">查看详情</div>
+                                    </el-dropdown-item>*@
+
+                                <el-dropdown-item>
+                                    <div v-on:click="del(scope.$index, scope.row.id)">删 除</div>
+                                </el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                        @*<el-dropdown trigger="click">
+                                <el-button type="warning" plain size="small" class="mb5">
+                                    状态维护
+                                    <i class="el-icon-caret-bottom el-icon--right"></i>
+                                </el-button>
+                                <el-dropdown-menu slot="dropdown">
+                                    <el-dropdown-item>
+                                        <div v-on:click="update_status(scope.$index, scope.row.id, 3)">审核通过</div>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item>
+                                        <div v-on:click="update_status(scope.$index, scope.row.id, 2)">审核不通过</div>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item>
+                                        <div v-on:click="update_status(scope.$index, scope.row.id, 7)">冻结</div>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item>
+                                        <div v-on:click="update_status(scope.$index, scope.row.id, 8)">淘汰</div>
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>*@
+
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-col :span="24" class="toolbar">
+                <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="page" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+                </el-pagination>
+            </el-col>
+        </article>
+
+
+        <el-dialog title="编辑库存" :visible.sync="editSkuStockVisible" size="small" :close-on-click-modal="false" top="5%" width="50%">
+            <el-form :model="skuStockForm" size="small" label-width="150px" ref="editForm" inline>
+                @*<el-form-item label="产品名">
+                        <div style="width:400px;">{{skuStockForm.skuName}}</div>
+                    </el-form-item><br />*@
+                <el-form-item label="产品型号">
+                    {{skuStockForm.skuFactoryModel}}
+                </el-form-item><br />
+                <el-form-item label="批次号">
+                    {{skuStockForm.batchNo}}
+                </el-form-item><br />
+                <el-form-item label="所在仓库" v-if="skuStockForm.warehouseId <= 0">
+                    未设置
+                </el-form-item>
+                <el-form-item label="所在仓库" v-if="skuStockForm.warehouseId > 0">
+                    {{skuStockForm.warehouse.number}}
+                </el-form-item>
+                <br />
+                <el-form-item label="现货库存" prop="currentStock">
+                    <el-input-number v-model="skuStockForm.currentStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                </el-form-item>
+                <el-form-item label="锁定库存" prop="lockStock">
+                    <el-input-number v-model="skuStockForm.lockStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                </el-form-item>
+                <el-form-item label="安全库存" prop="safeStock">
+                    <el-input-number v-model="skuStockForm.safeStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                </el-form-item>
+                <el-form-item label="低库存" prop="lowStock">
+                    <el-input-number v-model="skuStockForm.lowStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                </el-form-item>
+                <el-form-item label="在途库存" prop="onWayStock">
+                    <el-input-number v-model="skuStockForm.onWayStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                </el-form-item>
+                @*<el-form-item label="预入库存" prop="preStock">
+                    <el-input-number v-model="skuStockForm.preStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                </el-form-item>*@
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" type="primary" v-on:click="saveEdit()">保 存</el-button>
+            </div>
+        </el-dialog>
+
+        <el-dialog title="添加库存" :visible.sync="addSkuStockVisible" :close-on-click-modal="false" top="5%" width="50%">
+            <el-form :model="addSkuStockForm" size="small" label-width="150px" ref="editForm" inline>
+                <el-form-item label="选择产品" prop="skuId">
+                    <el-select v-model="addSkuStockForm.skuId"
+                               class="w200"
+                               clearable
+                               filterable
+                               remote
+                               reserve-keyword
+                               placeholder="请输入名称或型号"
+                               :remote-method="remoteMethod"
+                               :loading="loading">
+                        <el-option v-for="(item,index) in searchList"
+                                   :key="item.index"
+                                   :label="item.name"
+                                   :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="所在仓库" prop="warehouseId">
+                    <el-select v-model="addSkuStockForm.warehouseId" placeholder="请选择仓库" class="w200">
+                        <el-option v-for="item in warehouseList"
+                                   :key="item.id"
+                                   :label="item.number"
+                                   :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="现货库存" prop="currentStock">
+                    <el-input-number v-model="addSkuStockForm.currentStock" :controls="false" :precision="0" class="w200"></el-input-number>
+                </el-form-item>
+                <el-form-item label="锁定库存" prop="lockStock">
+                    <el-input-number v-model="addSkuStockForm.lockStock" :controls="false" :precision="0" class="w200"></el-input-number>
+                </el-form-item>
+                <el-form-item label="安全库存" prop="safeStock">
+                    <el-input-number v-model="addSkuStockForm.safeStock" :controls="false" :precision="0" class="w200"></el-input-number>
+                </el-form-item>
+                <el-form-item label="低库存" prop="lowStock">
+                    <el-input-number v-model="addSkuStockForm.lowStock" :controls="false" :precision="0" class="w200"></el-input-number>
+                </el-form-item>
+                <el-form-item label="在途库存" prop="onWayStock">
+                    <el-input-number v-model="addSkuStockForm.onWayStock" :controls="false" :precision="0" class="w200"></el-input-number>
+                </el-form-item>
+                @*<el-form-item label="预入库存" prop="preStock">
+                    <el-input-number v-model="addSkuStockForm.preStock" :controls="false" :precision="0" class="w200"></el-input-number>
+                </el-form-item>*@
+
+
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" size="small" v-on:click="saveAdd()">保 存</el-button>
+            </div>
+
+        </el-dialog>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    listLoading: false,
+                    loading: false,
+                    skuStockList: [],
+                    filters: {
+                        searchKey: "",
+                        warehouseId: 0
+                    },
+                    total: 30,
+                    page: 1,
+                    pageSize: 10,
+                    warehouseList: [],
+                    warehouseIdPath: [],
+                    editSkuStockVisible: false,
+                    addSkuStockVisible: false,
+                    skuStockForm: {
+                        id: 0,
+                        skuCostId: 0,
+                        skuId: 0,
+                        sku: void 0,
+                        productId: 0,
+                        batchId: 0,
+                        batchNo: '',
+                        skuName: void 0,
+                        skuFactoryModel: void 0,
+                        warehouseId: void 0,
+                        currentStock: void 0,
+                        lockStock: void 0,
+                        safeStock: void 0,
+                        lowStock: void 0,
+                        onWayStock: void 0,
+                        preStock: void 0,
+                        warehouse: {
+                            name: ''
+                        }
+                    },
+                    addSkuStockForm: {
+                        id: 0,
+                        skuCostId: 0,
+                        skuId: 0,
+                        sku: void 0,
+                        productId: 0,
+                        batchId: 0,
+                        batchNo: '',
+                        skuName: void 0,
+                        skuFactoryModel: void 0,
+                        warehouseId: void 0,
+                        currentStock: void 0,
+                        lockStock: void 0,
+                        safeStock: void 0,
+                        lowStock: void 0,
+                        onWayStock: void 0,
+                        preStock: void 0,
+                        warehouse: {
+                            name: ''
+                        }
+                    },
+                    searchList: [],
+                    searchAllList: [],
+
+                }
+            },
+            created() {
+                this.getWarehouseSimpleList(this.getSkuStockList);
+            },
+            methods: {
+                getWarehouseSimpleList: function (action) {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/warehouse/list/simple/get',
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.warehouseList = data.data;
+                                _self.warehouseList.unshift({
+                                    id: 0,
+                                    number: '请选择仓库'
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        complete() {
+                            if (action)
+                                action();
+                        }
+                    });
+                },
+                getSearchAll() {
+                    var _self = this;
+                    _self.listLoading = true;
+                    $.ajax({
+                        type: 'post',
+                        dataType: 'json',
+                        url: '/rest/sku/select/list',
+                        data: _self.filters,
+                        success: function (data) {
+                            _self.searchAllList = data.data;
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                            _self.listLoading = false;
+                        }
+                    });
+                },
+                remoteMethod(query) {
+                    if (query !== '') {
+                        this.loading = true;
+                        setTimeout(() => {
+                            this.loading = false;
+                            this.searchList = this.searchAllList.filter(item => {
+                                return item.name.toLowerCase().indexOf(query.toLowerCase()) > -1;
+                            });
+                        }, 200);
+                    } else {
+                        this.searchList = [];
+                    }
+                },
+                // 改变每页显示几条数据
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getSkuStockList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getSkuStockList();
+                },
+                getSkuStockList() {
+                    this.listLoading = true;
+                    var _self = this;
+                    var warehouseId = 0;
+                    $.ajax({
+                        type: 'GET',
+                        url: '../../rest/sku/stock/list',
+                        data: { key: _self.filters.searchKey, warehouseId: warehouseId, pageSize: _self.pageSize, currentPage: _self.page },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.page.totalCount;
+                                _self.skuStockList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                            _self.listLoading = false;
+                        }
+                    });
+                },
+                search() {
+                    this.getSkuStockList();
+                },
+                add() {
+                    //this.getSearchAll();
+                    //this.addSkuStockVisible = true;
+                    var _self = this;
+                    window.parent.MainIndex.addTabByIframe("添加RGC在售产品库存_" + 0, "/Sku/AddSkuStock?&skuStockId=0", "添加RGC在售产品库存");
+
+                },
+                saveAdd() {
+                    var _self = this;
+                    console.log(_self.addSkuStockForm);
+                    $.ajax({
+                        type: 'POST',
+                        contentType: 'application/json',
+                        url: '../../rest/sku/stock/create',
+                        data: JSON.stringify(_self.addSkuStockForm),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '保存成功'
+                                });
+                                _self.addSkuStockVisible = false;
+                                _self.getSkuStockList();
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                edit(row) {
+                    var _self = this;
+                    var skuStockId = row.id;
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/sku/stock/detail',
+                        data: { skuStockId: skuStockId },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.editSkuStockVisible = true;
+                                _self.skuStockForm.id = data.data.id;
+                                _self.skuStockForm.sku = data.data.sku;
+                                _self.skuStockForm.skuId = data.data.skuId;
+                                _self.skuStockForm.skuName = data.data.sku.fullEName;
+                                _self.skuStockForm.skuFactoryModel = data.data.sku.factoryModel;
+                                _self.skuStockForm.warehouseId = data.data.warehouseId;
+                                _self.skuStockForm.warehouse = data.data.warehouse;
+                                _self.skuStockForm.currentStock = data.data.currentStock;
+                                _self.skuStockForm.lockStock = data.data.lockStock;
+                                _self.skuStockForm.safeStock = data.data.safeStock;
+                                _self.skuStockForm.lowStock = data.data.lowStock;
+                                _self.skuStockForm.onWayStock = data.data.onWayStock;
+                                _self.skuStockForm.preStock = data.data.preStock;
+                                _self.skuStockForm.productId = data.data.productId;
+                                _self.skuStockForm.skuCostId = data.data.skuCostId;
+                                _self.skuStockForm.batchId = data.data.batchId;
+                                _self.skuStockForm.batchNo = data.data.batchNo;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                saveEdit() {
+                    var _self = this;
+                    console.log(_self.skuStockForm);
+                    $.ajax({
+                        type: 'POST',
+                        contentType: 'application/json',
+                        url: '../../rest/sku/stock/update',
+                        data: JSON.stringify(_self.skuStockForm),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '保存成功'
+                                });
+                                _self.editSkuStockVisible = false;
+                                _self.getSkuStockList();
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                detail(id) {
+
+                },
+
+                del(index, id) {
+                    var _self = this;
+                    this.$confirm("确定删除吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '../../rest/sku/stock/delete',
+                            data: { id: id },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '删除成功'
+                                    });
+                                    _self.getSkuStockList();
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                }
+            }
+        };
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#skustocklist');
+    </script>
+
+</body>

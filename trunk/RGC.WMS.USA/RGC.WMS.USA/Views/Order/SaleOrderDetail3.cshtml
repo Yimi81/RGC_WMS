@@ -1,0 +1,237 @@
+﻿@{
+    ViewData["Title"] = "SSOrderDetail";
+}
+<style>
+    .mg5 {
+        margin: 5px;
+    }
+
+    .mg15 {
+        margin: 15px;
+    }
+
+    .mgr10 {
+        margin-right: 10px;
+    }
+
+    .wd1350 {
+        width: 1350px;
+    }
+
+    .wd400 {
+        width: 400px;
+    }
+
+    .wd300 {
+        width: 300px;
+    }
+
+    .wd200 {
+        width: 200px;
+    }
+
+    .wd150 {
+        width: 150px;
+    }
+
+    .wd120 {
+        width: 120px;
+    }
+
+    .wd100 {
+        width: 100px;
+    }
+
+    .c01 {
+        background-color: #000000;
+    }
+
+    .fwb {
+        font-weight: bold;
+    }
+
+    .fl {
+        float: left;
+    }
+
+    .tar {
+        text-align: right;
+    }
+
+    .noprint {
+        visibility: hidden
+    }
+</style>
+<div id="userlist" class="p15 bac01 h100b bsb">
+    <el-card class="el-card--plr">
+        @*<el-row class="toolbar toolbar--top">
+                <el-col :span="6">
+                   <el-breadcrumb separator="/">
+                        <el-breadcrumb-item><strong>订单管理</strong></el-breadcrumb-item>
+                        <el-breadcrumb-item>ShipStation订单详情</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </el-col>
+            </el-row>*@
+
+        <template>
+            <div id="printout">
+                <div>
+                    <span class="fwb">Order Summary Report </span>
+                    <el-divider class="mg15 c01 wd1350"></el-divider>
+                    <div style="float:left;">
+                        <div>{{ orderInfo.shipToName  }}</div>
+                        <div style="width:320px;word-break:break-all;">{{ orderInfo.shipToCompany  }}</div>
+                        <div style="width:320px;word-break:break-all;">{{ orderInfo.shipToAddress1  }}</div>
+                        <div style="width:320px;word-break:break-all;">{{ orderInfo.shipToAddress2  }}</div>
+                        <div style="width:320px;word-break:break-all;">{{ orderInfo.shipToCity  }}, {{ orderInfo.shipToState  }}  {{ orderInfo.shipToZipcode  }} {{ orderInfo.shipToCountry  }}</div>
+                    </div>
+                    <div style="float:left;">
+                        <div style="width:320px;"><div class="fwb wd120 fl tar mgr10">Date Paid: </div>{{ orderInfo.paymentDateString}}</div>
+                        <div><div class="fwb wd120 fl tar mgr10">Amount Paid: </div>${{ orderInfo.amountPaidString | capitalize}}</div>
+                        <div><div class="fwb wd120 fl tar mgr10">Record #: </div>{{ orderInfo.orderNumber}}</div>
+                        <div><div class="fwb wd120 fl tar mgr10">Store: </div></div>
+                    </div>
+                    <div style="float:left;">
+                        <div>
+                            <span class="fwb">Buyer Comments</span>
+                        </div>
+                        <el-divider class="mg5 wd150"></el-divider>
+                        <div style="width:210px;word-break:break-all;">
+                            {{ orderInfo.customerNotes}}12321321333333333333333333333333333333333333333333333333333333333333
+                        </div>
+                    </div>
+                    <div style="float:left;margin-left:20px;">
+                        <div>
+                            <span class="fwb">Internal Notes</span>
+                        </div>
+                        <el-divider class="mg5 wd150"></el-divider>
+                        <div style="width:210px;word-break:break-all;">
+                            {{ orderInfo.internalNotes}}
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <el-table :data="orderInfo.items" style="width: 1350px;">
+                        <el-table-column prop="factoryModel" label="Item ID" width="180"></el-table-column>
+                        <el-table-column prop="name" label="Title" min-width="200"></el-table-column>
+                        <el-table-column prop="unitPriceString" label="Unit Price" width="180">
+                            <template slot-scope="scope">
+                                ${{scope.row.unitPriceString | capitalize}}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="qty" label="Qty" width="180"></el-table-column>
+                        <el-table-column prop="extPriceString" label="Ext Price" width="180">
+                            <template slot-scope="scope">
+                                ${{scope.row.extPriceString | capitalize}}
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+            <div style="text-align:left;margin-bottom:20px;margin-top:20px">
+                <el-button size="mini" type="primary" v-on:click="printDiv" class="">打印</el-button>
+            </div>
+
+        </template>
+    </el-card>
+</div>
+<script src="/js/canvg.js"></script>
+<script src="/js/html2canvas.js"></script>
+<script src="/js/jspdf.debug.js"></script>
+<script>
+    var main = {
+        data() {
+            return {
+                activeName: "first",
+                orderInfo: {},
+                orderLoading: false,
+
+                height_table: 650,//表格高度
+                // 分页
+                total: 0,
+                currentPage: 1,
+                pageSize: 10,
+                itemListLoading: false,//表格loading
+                selectList: [],
+
+
+            }
+        },
+         filters: {
+          capitalize: function (x) {
+              var f = parseFloat(x); 
+             if (isNaN(f)) { 
+                return false; 
+             } 
+             var f = Math.round(x*100)/100; 
+             var s = f.toString(); 
+             var rs = s.indexOf('.'); 
+             if (rs < 0) { 
+                 rs = s.length; 
+                 s += '.'; 
+             } 
+             while (s.length <= rs + 2) { 
+                s += '0'; 
+             } 
+             return s; 
+          }
+        },
+        methods: {
+            getOrderDetail() {
+                var _self = this;
+                //_self.itemListLoading = true;
+                var filter = {};
+                filter.id =@ViewBag.orderId;
+
+                $.ajax({
+                    type: 'GET',
+                    //dataType: 'json',
+                    //contentType: 'application/json',
+                    url: '/rest/saleorder/detail/get?orderId=@ViewBag.orderId',
+                    //data: JSON.stringify(filter),
+                    success: function (data) {
+                        _self.orderInfo = data.data;
+                        //_self.itemListLoading = false;
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (XMLHttpRequest.status == 401 || errorThrown == "Unauthorized") {
+                            window.parent.Main.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                        //_self.itemListLoading = false;
+                    }
+                });
+            }
+        },
+        created() {
+            this.getOrderDetail();
+        }
+    };
+    var Ctor = Vue.extend(main)
+    new Ctor().$mount('#userlist')
+
+    function printDiv() {
+        //Get the HTML of div
+        var divElements = document.getElementById('printout').innerHTML;
+        //Get the HTML of whole page
+        var oldPage = document.body.innerHTML;
+        //Reset the page's HTML with div's HTML only
+        document.body.innerHTML =
+            "<html><head><title></title></head><body>" +
+            divElements + "</body>";
+        //Print Page
+        window.print();
+        //Restore orignal HTML
+        document.body.innerHTML = oldPage;
+        location.reload();//重置按钮事件 解决打印按钮 点击后失效问题
+    }
+  
+</script>

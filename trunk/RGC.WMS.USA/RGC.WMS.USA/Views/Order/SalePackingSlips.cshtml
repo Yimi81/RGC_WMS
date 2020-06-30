@@ -1,0 +1,352 @@
+﻿@{
+    ViewData["Title"] = "Packing Slips";
+}
+<style>
+    .mg5 {
+        margin: 5px;
+    }
+
+    .mg15 {
+        margin: 15px;
+    }
+    .mt10 {
+        margin-top: 10px;
+    }
+    .mt20 {
+        margin-top: 20px;
+    }
+    .mt30 {
+        margin-top: 30px;
+    }
+
+    .mgr10 {
+        margin-right: 10px;
+    }
+    .mgr100 {
+        margin-right: 100px;
+    }
+
+    .wd1350 {
+        width: 1350px;
+    }
+    .wd800 {
+        width: 800px;
+    }
+
+    .wd400 {
+        width: 400px;
+    }
+
+    .wd300 {
+        width: 300px;
+    }
+
+    .wd200 {
+        width: 200px;
+    }
+
+    .wd150 {
+        width: 150px;
+    }
+
+    .wd120 {
+        width: 120px;
+    }
+
+    .wd100 {
+        width: 100px;
+    }
+
+    .c01 {
+        background-color: #000000;
+    }
+
+    .fwb {
+        font-weight: bold;
+    }
+
+    .fl {
+        float: left;
+    }
+
+    .tar {
+        text-align: right;
+    }
+    .tac {
+        text-align: center;
+    }
+
+    .noprint {
+        visibility: hidden
+    }
+    .title {
+        font-size: 18px;
+        font-weight: bold;
+        line-height: 20px;
+        height: 40px;
+  
+        margin-bottom: 5px;
+        text-align:center
+    }
+    .main {
+        padding-left:20%;
+        padding-right:20%
+    }
+    .firstRow {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 30px;
+    }
+    .isBold {
+        font-weight: bold;
+        float: left
+    }
+    .listStyle
+    {
+        list-style-type:none;
+       float:left
+    }
+    .listStyle li {
+        margin-bottom: 3px;
+    }
+
+    .listStyle li:last-child {
+        margin-bottom: 0px;
+    }
+    .listStyle2 {
+        list-style-type: none;
+        font-weight:bold;
+    }
+    .listStyle2 li{
+        margin-bottom:3px;
+    }
+    .listStyle2 li:last-child {
+        margin-bottom: 0px;
+    }
+    .left{
+        float:left;
+        width:80px;
+        text-align:right;
+        padding-right:5px;
+        border-right:2px solid gray;
+    }
+    .right
+    {
+        float:left
+    }
+    .listStyle3 {
+        list-style-type: none;
+        padding-left:5px;
+
+    }
+    .listStyle4 li{
+        margin-bottom:10px;
+    }
+    .listStyle4 li:last-child {
+        margin-bottom: 0px;
+    }
+    .bottom{
+        text-align:right;
+        margin-top:10px
+            
+    }
+    .bottom span {
+        font-weight: bold;
+        margin-right:40px;
+    }
+</style>
+<div id="userlist" class="p15 bac01 h100b bsb">
+    <el-card class="el-card--plr">
+        @*<el-row class="toolbar toolbar--top">
+                <el-col :span="6">
+                   <el-breadcrumb separator="/">
+                        <el-breadcrumb-item><strong>订单管理</strong></el-breadcrumb-item>
+                        <el-breadcrumb-item>ShipStation订单详情</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </el-col>
+            </el-row>*@
+
+        <template>
+            <div id="printout">
+  
+                <h1 class="title">Packing Slip </h1>
+                <div class="main">
+                    <el-row class="firstRow">
+                        {{ orderInfo.shipToCompany  }}
+                    </el-row>
+
+                    <el-row :gutter="20" style=" overflow: hidden">
+
+                        <el-col :span="12">
+                            <span class="isBold">Ship To: </span>
+                            <ul class="listStyle">
+                                <li>{{ orderInfo.shipToName  }}</li>
+                                <li>{{ orderInfo.shipToCompany  }}</li>
+                                <li>{{ orderInfo.shipToAddress1  }}</li>
+                                <li>{{ orderInfo.shipToCity  }}, {{ orderInfo.shipToState  }} {{ orderInfo.shipToZipcode  }} {{ orderInfo.shipToCountry  }}</li>
+                            </ul>
+                        </el-col>
+                        <el-col :span="10" :offset="2">
+                            <div class="left">
+                                <ul class="listStyle2">
+                                    <li>Order #</li>
+                                    <li>Date</li>
+                                    <li>User</li>
+                                    <li>Ship Date</li>
+                                </ul>
+                            </div>
+                            <div class="right">
+                                <ul class="listStyle3">
+                                    <li>{{ orderInfo.orderNumber}}</li>
+                                    <li>{{ orderInfo.orderDateString  }}</li>
+                                    <li>{{ orderInfo.customerUsername  }}</li>
+                                    <li></li>
+                                </ul>
+                            </div>
+
+                        </el-col>
+                    </el-row>
+
+
+
+                    <div style="clear:left;padding-top:20px;" class="">
+                        <el-table :data="orderInfo.items" style="width: 100%">
+                            <el-table-column prop="factoryModel" label="Item"></el-table-column>
+                            <el-table-column prop="name" label="Description"></el-table-column>
+                            <el-table-column prop="unitPriceString" label="Price">
+                                <template slot-scope="scope">
+                                    ${{scope.row.unitPriceString | capitalize}}
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="qty" label="Qty"></el-table-column>
+                            <el-table-column prop="extPrice" label="Ext Price">
+                                <template slot-scope="scope">
+                                    ${{scope.row.extPriceString | capitalize}}
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                    <div class="bottom">
+                        <ul class="listStyle4">
+                            <li><span>Sub Toal:</span>${{ orderInfo.orderTotalString | capitalize}}</li>
+                            <li><span>Tax:</span>${{ orderInfo.taxAmountString | capitalize}}</li>
+                            <li><span>Shipping:</span>${{ orderInfo.shippingAmountString | capitalize}}</li>
+                            <li><span>Toal:</span>${{ orderInfo.amountPaidString | capitalize}}</li>
+                        </ul>
+                    </div>
+
+
+                </div>
+
+            </div>
+            <div style="text-align:left;margin-bottom:20px;margin-top:20px">
+                <el-button size="mini" type="primary" v-on:click="printDiv" class="">打印</el-button>
+            </div>
+
+        </template>
+    </el-card>
+</div>
+<script src="/js/canvg.js"></script>
+<script src="/js/html2canvas.js"></script>
+<script src="/js/jspdf.debug.js"></script>
+<script>
+    var main = {
+        data() {
+            return {
+                activeName: "first",
+                orderInfo: {
+                    billTo: {},
+                    shipTo: {}
+                },
+                orderLoading: false,
+
+                height_table: 650,//表格高度
+                // 分页
+                total: 0,
+                currentPage: 1,
+                pageSize: 10,
+                itemListLoading: false,//表格loading
+                selectList: [],
+
+
+            }
+        },
+        filters: {
+          capitalize: function (x) {
+              var f = parseFloat(x); 
+             if (isNaN(f)) { 
+                return false; 
+             } 
+             var f = Math.round(x*100)/100; 
+             var s = f.toString(); 
+             var rs = s.indexOf('.'); 
+             if (rs < 0) { 
+                 rs = s.length; 
+                 s += '.'; 
+             } 
+             while (s.length <= rs + 2) { 
+                s += '0'; 
+             } 
+             return s; 
+          }
+        },
+        methods: {
+            getOrderDetail() {
+                var _self = this;
+                //_self.itemListLoading = true;
+                var filter = {};
+                filter.id =@ViewBag.orderId;
+
+                $.ajax({
+                    type: 'GET',
+                    //dataType: 'json',
+                    //contentType: 'application/json',
+                    url: '/rest/saleorder/detail/get?orderId=@ViewBag.orderId',
+                    //data: JSON.stringify(filter),
+                    success: function (data) {
+                        _self.orderInfo = data.data;
+                        //_self.itemListLoading = false;
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (XMLHttpRequest.status == 401 || errorThrown == "Unauthorized") {
+                            window.parent.Main.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                        //_self.itemListLoading = false;
+                    }
+                });
+            }
+        },
+        created() {
+            this.getOrderDetail();
+        }
+    };
+    var Ctor = Vue.extend(main)
+    new Ctor().$mount('#userlist')
+
+    function printDiv() {
+        //Get the HTML of div
+        var divElements = document.getElementById('printout').innerHTML;
+        //Get the HTML of whole page
+        var oldPage = document.body.innerHTML;
+        //Reset the page's HTML with div's HTML only
+        document.body.innerHTML =
+            "<html><head><title></title></head><body>" +
+            divElements + "</body>";
+        //Print Page
+        window.print();
+        //Restore orignal HTML
+        document.body.innerHTML = oldPage;
+        location.reload();//重置按钮事件 解决打印按钮 点击后失效问题
+    }
+  
+</script>

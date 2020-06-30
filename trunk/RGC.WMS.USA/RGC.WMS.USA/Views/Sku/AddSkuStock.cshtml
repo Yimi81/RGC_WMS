@@ -1,0 +1,556 @@
+﻿@{
+    ViewBag.Title = "Add";
+}
+<link rel="stylesheet" href="/lib/elFinder/lib/jquery-ui/themes/base/all.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/elfinder.full.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/theme.css" />
+<link rel="stylesheet" href="/css/common.css" />
+<style>
+    #nav {
+        width: 100%;
+        /*position: fixed;
+        top: 100px;*/
+        /*ie6下样式，加下划线表示只针对ie6 的hack */
+        _position: absolute; /* 把导航栏位置定义为绝对位置  关键*/
+        _top: expression(documentElement.scrollTop + "px"); /* 把导航栏位置放在浏览器垂直滚动条的顶端  关键 */
+        z-index: 100; /* 让导航栏浮在网页的高层位置，遇到flash和图片时候也能始终保持最外层 */
+    }
+
+    .pl90 {
+        padding-left: 90px;
+    }
+
+    .el-step__title {
+        font-size: 13px !important;
+        line-height: 38px;
+        cursor: pointer;
+    }
+
+    .w140 {
+        width: 140px;
+    }
+
+    .w178 {
+        width: 178px;
+    }
+
+    .w183 {
+        width: 183px;
+    }
+
+    .w250 {
+        width: 250px;
+    }
+
+    .w365 {
+        width: 365px;
+    }
+
+    .avatar {
+        width: 200px;
+        height: 200px;
+        display: block;
+    }
+
+    .el-card {
+        border: none;
+    }
+
+    .el-card__header {
+        border-bottom: none;
+        padding-left: 0;
+    }
+
+    .el-card__body {
+        padding: 0;
+    }
+
+    .el-steps--simple {
+        padding: 10px 6% !important;
+    }
+
+    .item_title {
+        height: 35px;
+        padding: 0 15px;
+        margin-bottom: 20px;
+        line-height: 35px;
+        background-color: #E5E9F2;
+        border-radius: 3px;
+    }
+
+        .item_title .el-button {
+            margin-top: 4px;
+        }
+
+    .skuform .el-tabs__header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 9;
+        margin-top: 10px;
+    }
+
+    .savebtn {
+        float: right;
+        position: sticky;
+        top: 4px;
+        right: 10px;
+        z-index: 10;
+        margin-right: 10px;
+    }
+
+    .skuform .el-tabs__item {
+        height: 44px;
+        line-height: 44px;
+    }
+
+    .hide-empty .el-table__empty-block {
+        display: none;
+    }
+
+    .detail-table > .el-table__body-wrapper > table > tbody > tr > td:not(:first-child), .detail-table > .el-table__body-wrapper > table > tbody > tr > td:not(:first-child) > .cell {
+        padding: 0;
+        border: none;
+    }
+    /*.el-input__inner{
+        width:183px;
+    }*/
+    .maidian_scroll::-webkit-scrollbar { /*滚动条整体样式*/
+        width: 6px !important;
+        ; /*高宽分别对应横竖滚动条的尺寸*/
+        height: 6px !important;
+        ;
+        background: #ffffff !important;
+        ;
+        cursor: pointer !important;
+    }
+
+    .maidian_scroll::-webkit-scrollbar-thumb { /*滚动条里面小方块*/
+        border-radius: 5px !important;
+        -webkit-box-shadow: inset 0 0 5px rgba(240, 240, 240, .5) !important;
+        ;
+        background: rgba(0, 0, 0, 0.8) !important;
+        ;
+        cursor: pointer !important;
+    }
+
+    .maidian_scroll::-webkit-scrollbar-track { /*滚动条里面轨道*/
+        -webkit-box-shadow: inset 0 0 5px rgba(240, 240, 240, .5) !important;
+        ;
+        border-radius: 0 !important;
+        ;
+        background: rgba(240, 240, 240, 0.5) !important;
+        ;
+        cursor: pointer !important;
+    }
+
+    .pici_checkbox:hover {
+        border-color: #242424;
+    }
+</style>
+<body>
+    <div id="wrapper">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>产品管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>添加RGC在售产品库存</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <template>
+            <article class="administration-maintenance-container" v-loading="loading">
+                <div ref="nav_sku" id="nav_sku">
+
+                    <el-form :inline="true" :model="currSkuStock" ref="currSkuStock" @*:rules="rules" *@ label-width="300px" class="skuform" label-position="right" size="mini">
+
+                        <!-- 选择SKU -->
+
+                        <el-card class="box-card" shadow="hover" :body-style="{ padding: '0px' }">
+                            <div slot="header">
+                                <span class="step-jump pr ml20">
+                                    <i class="tip-tit">
+                                        <i class="pr z-in2 pl10">产品信息</i>
+                                    </i>
+                                </span>
+                            </div>
+                            <el-row>
+                                <el-form-item label="Sku" prop="skuFactoryModel" label-width="315px">
+
+                                    <el-input v-model.trim="currSkuStock.skuFactoryModel" :disabled="true" style="width:300px;">
+                                        <el-button slot="append" type="primary" plain v-on:click="openSelectSku">
+                                            选择RGC在售产品
+                                            <i class="el-icon-menu"></i>
+                                        </el-button>
+                                    </el-input>
+
+                                </el-form-item>
+                            </el-row>
+                            <el-row>
+                                <el-form-item label="批次号" :disabled="true" prop="batchNo" label-width="315px">
+                                    <el-input v-model="currSkuStock.batchNo" :disabled="true" class="w365" />
+                                </el-form-item>
+                            </el-row>
+                            <el-row>
+                                <el-form-item label="Remark (备注)" label-width="312px">
+                                    <el-input v-model="currSkuStock.remark" type="textarea" :rows="4"
+                                              placeholder="Remark (备注)" class="w365" />
+                                </el-form-item>
+                            </el-row>
+                        </el-card>
+
+                        <!-- 库存信息 -->
+
+                        <el-card class="box-card" shadow="hover" style="margin-top:20px;padding-right:30px;" :body-style="{ padding: '0px' }">
+                            <div slot="header">
+                                <span class="step-jump pr ml20">
+                                    <i class="tip-tit">
+                                        <i class="pr z-in2 pl10">库存信息</i>
+                                    </i>
+                                </span>
+                            </div>
+                            <el-form-item label="所在仓库" prop="warehouseId">
+                                <el-select v-model="currSkuStock.warehouseId" placeholder="请选择仓库" class="w178">
+                                    <el-option v-for="item in warehouseList"
+                                               :key="item.id"
+                                               :label="item.number"
+                                               :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="现货库存" prop="currentStock">
+                                <el-input-number v-model="currSkuStock.currentStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                            </el-form-item>
+                            <el-form-item label="锁定库存" prop="lockStock">
+                                <el-input-number v-model="currSkuStock.lockStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                            </el-form-item>
+                            <el-form-item label="安全库存" prop="safeStock">
+                                <el-input-number v-model="currSkuStock.safeStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                            </el-form-item>
+                            <el-form-item label="低库存" prop="lowStock">
+                                <el-input-number v-model="currSkuStock.lowStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                            </el-form-item>
+                            <el-form-item label="在途库存" prop="onWayStock">
+                                <el-input-number v-model="currSkuStock.onWayStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                            </el-form-item>
+                            @*<el-form-item label="预入库存" prop="preStock">
+                                <el-input-number v-model="currSkuStock.preStock" :controls="false" :precision="0" class="w178"></el-input-number>
+                            </el-form-item>*@
+
+                        </el-card>
+
+
+                        <div style="text-align:center;margin-top:20px;">
+                            <el-button type="primary" size="mini" v-on:click="saveAdd()" v-loading="loading">
+                                保 存
+                                <i class="el-icon-check" style="margin-left:5px;"></i>
+                            </el-button>
+                        </div>
+
+                </div>
+            </article>
+
+            <!-- 选择RGC在售产品 -->
+            <el-dialog title="选择RGC在售产品" :visible.sync="batchListVisable" :close-on-click-modal="false" top="5%" width="1200px">
+                <article class="search">
+                    <section>
+                        <el-input placeholder="可根据工厂型号或批次号搜索" v-model="filters.searchKey"
+                                  v-on:keyup.enter.native="getSkuBatchList()" style="width:250px" clearable size="small"></el-input>
+
+                        <el-button v-on:click="search" icon="el-icon-search" size="small">搜索</el-button>
+                    </section>
+                </article>
+                <el-row>
+                    <el-col>
+                        <el-table class="data-table" v-loading="batchListLoading" :data="skuBatchList" :fit="true" border size="small">
+                            <el-table-column min-width="50" prop="id" label="ID">
+                                <template slot-scope="scope">
+                                    <i>{{scope.row.id}}</i>
+                                </template>
+                            </el-table-column>
+                            @*<el-table-column min-width="200" prop="fullEName" label="产品名">
+                                </el-table-column>*@
+                            <el-table-column min-width="100" prop="factoryModel" label="工厂型号">
+                                <template slot-scope="scope">
+                                    <i>{{scope.row.sku.factoryModel}}</i>
+                                </template>
+                            </el-table-column>
+                            <el-table-column width="120" label="图片" align="center">
+                                <template slot-scope="scope">
+                                    <img v-if="scope.row.sku.primaryImageSrcFull" class="pimg" alt="no image" :src="scope.row.sku.primaryImageSrcFull" height="50">
+                                </template>
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="batchNo" label="批次号">
+                                <template slot-scope="scope">
+                                    <i>{{scope.row.batchNo}}</i>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="status" label="状态" width="110">
+                                <template slot-scope="scope">
+                                    <el-tag size="small" v-if="scope.row.status == 0" type="info">在制</el-tag>
+                                    <el-tag size="small" v-if="scope.row.status == 1" type="warning">在途</el-tag>
+                                    <el-tag size="small" v-if="scope.row.status == 2" type="success">已到货</el-tag>
+                                    <el-tag size="small" v-if="scope.row.status == 3">在售</el-tag>
+                                    <el-tag size="small" v-if="scope.row.status == 4" type="danger">售罄</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="remark" label="备注">
+                                <template slot-scope="scope">
+                                    <i>{{scope.row.remark}}</i>
+                                </template>
+                            </el-table-column>
+                            @*<el-table-column min-width="100" prop="createTime" label="创建时间">
+                                    <template slot-scope="scope">
+                                        <i>{{scope.row.creationTimeString}}</i>
+                                    </template>
+                                </el-table-column>*@
+                            <el-table-column width="100" label="操作">
+                                <template slot-scope="scope">
+                                    <el-button type="primary" size="small" class="waves-effect mb5" v-on:click="chooseSkuId(scope.row)">
+                                        选择
+                                    </el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </el-col>
+                    <el-col :span="24" class="toolbar">
+                        <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="page" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+                        </el-pagination>
+                    </el-col>
+                </el-row>
+            </el-dialog>
+        </template>
+    </div>
+
+    <script type="text/javascript" src="/lib/ckeditor/ckeditor.js"></script>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    loading: false,
+                    listLoading: false,
+                    skuId: 0,
+                    isChoose: true,
+                    currSkuStock: {
+                        id: 0,
+                        skuCostId: 0,
+                        skuId: 0,
+                        sku: void 0,
+                        productId: 0,
+                        batchId: 0,
+                        batchNo: '',
+                        skuName: void 0,
+                        skuFactoryModel: void 0,
+                        warehouseId: void 0,
+                        currentStock: 0,
+                        lockStock: 0,
+                        safeStock: 0,
+                        lowStock: 0,
+                        onWayStock: 0,
+                        preStock: 0,
+
+                    },
+                    warehouseList: [],
+                    skuBatchList: [],
+                    batchListVisable: false,
+                    batchListLoading: false,
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0,
+                        type: void 0,
+                        status: void 0
+                    },
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+
+                }
+            },
+            created() {
+                this.getWarehouseSimpleList();
+            },
+            methods: {
+
+                chooseSkuId(row) {
+                    var _self = this;
+                    _self.currSkuStock.sku = row.sku;
+                    _self.currSkuStock.skuId = row.skuId;
+                    _self.currSkuStock.productId = row.productId;
+                    _self.currSkuStock.skuFactoryModel = row.sku.factoryModel;
+                    _self.currSkuStock.batchNo = row.batchNo;
+                    _self.currSkuStock.skuCostId = row.skuCostId;
+                    _self.currSkuStock.batchId = row.id;
+                    _self.batchListVisable = false;
+                },
+                openSelectSku: function () {
+                    var _self = this;
+                    _self.getSkuBatchList();
+                    _self.batchListVisable = true;
+                },
+                search() {
+                    this.page = 1;
+                    this.getSkuBatchList();
+                },
+                getWarehouseSimpleList: function (action) {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/warehouse/list/simple/get',
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.warehouseList = data.data;
+                                _self.warehouseList.unshift({
+                                    id: 0,
+                                    number: '请选择仓库'
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        }
+                    });
+                },
+                getSkuBatchList() {
+                    var _self = this;
+                    _self.batchListLoading = true;
+                    _self.skuBatchList = [];
+                    var batchNo = '';
+                    $.ajax({
+                        type: 'Get',
+                        url: '../../rest/sku/cost/batch/list',
+                        data: { key: _self.filters.searchKey, batchNo: batchNo, pageSize: _self.pageSize, currentPage: _self.page },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.page.totalCount;
+                                _self.skuBatchList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (XMLHttpRequest.status == 401 || errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                            _self.batchListLoading = false;
+                        }
+                    });
+                },
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getSkuBatchList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getSkuBatchList();
+                },
+                //【点击第几页】
+                handleCurrentChange1(val) {
+                    this.page = val;
+                    this.getSkuBatchList();
+                },
+                saveAdd() {
+                    var _self = this;
+                    console.log(_self.currSkuStock);
+                    //return;
+                    $.ajax({
+                        type: 'POST',
+                        url: '../../rest/sku/stock/create',
+                        contentType: 'application/json',
+                        data: JSON.stringify(_self.currSkuStock),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '保存成功'
+                                });
+                                _self.clear();
+                                //_self.addSkuStockVisible = false;
+                                //_self.getSkuStockList();
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                clear() {
+                    var _self = this;
+                    //清空缓存
+                    _self.currSkuStock = {
+                        id: 0,
+                        skuCostId: 0,
+                        skuId: 0,
+                        sku: void 0,
+                        productId: 0,
+                        batchId: 0,
+                        batchNo: '',
+                        skuName: void 0,
+                        skuFactoryModel: void 0,
+                        warehouseId: void 0,
+                        currentStock: 0,
+                        lockStock: 0,
+                        safeStock: 0,
+                        lowStock: 0,
+                        onWayStock: 0,
+                        preStock: 0,
+
+                    };
+                }
+            },
+            components: {
+
+            },
+            mounted() {
+                this.skuId = getQueryString("skuId");
+                //alert(this.skuId)
+                //有skuId是列表创建跳转
+                if (this.skuId > 0) {
+                    this.getSku();
+                    this.isChoose = false;
+                }
+            }
+        }
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#wrapper');
+
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+    </script>
+</body>

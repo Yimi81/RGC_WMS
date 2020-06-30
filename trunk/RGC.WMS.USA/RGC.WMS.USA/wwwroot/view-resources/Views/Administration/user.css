@@ -1,0 +1,57 @@
+/*================================*/
+/*========== 用户管理 ============*/
+/*================================*/
+/*右侧新增、编辑抽屉*/
+.user-drawer .el-drawer__header {
+    padding: 20px 30px;
+    border-bottom: solid 1px #ccc;
+}
+.user-drawer .el-icon-close {
+    cursor: pointer;
+}
+.user-drawer__content{
+	padding: 0 30px;
+}
+/*.user-drawer__content .el-tag{
+	margin: 0 5px 5px 0;
+}*/
+.button--close {
+    position: absolute;
+    top: 3px;
+    right: 0;
+    padding: 0;
+}
+.card--permission .el-card__body {
+    height: calc(100% - 55px);
+    overflow-y: auto;
+}
+.syslist .el-checkbox {
+    line-height: 28px;
+}
+.syslist .el-checkbox__label {
+    font-weight: bolder;
+}
+.syslist .remark {
+    height: auto;
+    padding-left: 25px;
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 22px;
+    color: #666;
+}
+.syslist .el-col{
+    padding-top:20px;
+    padding-bottom:60px;
+}
+.syslist .el-button--text {
+    display: none;
+}
+.syslist .is-checked+.el-button--text {
+    display: inline-block;
+}
+.systags .el-tag {
+    margin-right: 10px;
+}
+.my-transfer__tree{
+    height:320px;
+}

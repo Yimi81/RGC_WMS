@@ -1,0 +1,366 @@
+﻿
+@{
+    /**/
+
+    ViewBag.Title = "List";
+}
+
+<body class="plr20">
+    <div id="skulist">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>电商管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>平台在售产品改价记录</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+
+        <article class="administration-tenant-container">
+            <!--搜索-->
+            <el-col :span="24" class="toolbar">
+                <el-form :inline="true" size="small" :model="filters" v-on:submit.native.prevent>
+                    <el-form-item>
+                        <el-input placeholder="产品名" v-model="filters.searchKey"
+                                  v-on:keyup.enter.native="getItemPriceRecordList()" clearable></el-input>
+                    </el-form-item>
+
+                    <el-form-item>
+                        <el-select v-model="filters.platformId" placeholder="请选择平台" clearable>
+                            <el-option v-for="item in platformlist"
+                                       :key="item.id"
+                                       :label="item.eName"
+                                       :value="item.id">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button v-on:click="search" icon="el-icon-search">搜索</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+
+            <el-table class="data-table" v-loading="listLoading" :data="itemPriceList" :fit="true" border size="mini">
+                <el-table-column prop="id" label="id" width="80" fixed="left"></el-table-column>
+                <el-table-column prop="itemId" label="itemId" min-width="80" fixed="left"></el-table-column>
+                @*<el-table-column prop="productId" label="原产品Id" min-width="60" sortable></el-table-column>*@
+                <el-table-column prop="factoryModel" label="工厂型号" min-width="80" fixed="left"></el-table-column>
+                <el-table-column min-width="180" prop="itemName" label="产品名">
+                </el-table-column>
+                <el-table-column min-width="100" prop="srcFull" label="图片">
+                    <template slot-scope="scope">
+                        <img :src="scope.row.srcFull" class="pimg" alt="no image" v-if="scope.row.srcFull!=''" height="50">
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="90" prop="platformName" label="平台名称">
+                </el-table-column>
+                <el-table-column min-width="60" prop="wholeSalePriceString" label="批发价">
+                    <template slot-scope="scope">
+                        <i v-if="scope.row.platformId==10">-</i>
+                        <i v-else>{{scope.row.wholeSalePriceString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="60" prop="retailPriceString" label="零售价">
+                    <template slot-scope="scope">
+                        <i v-if="scope.row.platformId!=10">-</i>
+                        <i v-else>{{scope.row.retailPriceString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="120" prop="validTimeString" label="生效时间">
+                    <template slot-scope="scope">
+                        <i v-if="scope.row.platformId!=10">-</i>
+                        <i v-else>{{scope.row.validTimeString}}</i>
+                    </template>
+                </el-table-column>
+
+                <el-table-column width="140" prop="creationTimeString" label="改价时间">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.creationTimeString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="60" prop="creationUserName" label="改价人">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.creationUserName }}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" width="100">
+                    <template slot-scope="scope">
+                        <div v-if="scope.row.platformId==10">
+                            <el-tag v-if="scope.row.status == 0" type="success">审核通过</el-tag>
+                            <el-tag v-if="scope.row.status == 1" type="info">待审核</el-tag>
+                            <el-tag v-if="scope.row.status == 2" type="danger">审核不通过</el-tag>
+                        </div>
+                        <i v-if="scope.row.platformId!=10">-</i>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="level" label="下发级别" width="70">
+                    <template slot-scope="scope">
+                        <div v-if="scope.row.platformId==10">
+                            <i class="el-icon-success" v-if="scope.row.level == 0" title="正常" style="color:forestgreen;font-size:16px"></i>
+                            <i class="el-icon-warning" v-if="scope.row.level == 1" title="紧急" style="color:red;font-size:16px"></i>
+                        </div>
+                        <i v-if="scope.row.platformId!=10">-</i>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="isSync" label="同步状态" width="70">
+                    <template slot-scope="scope">
+                        <div v-if="scope.row.platformId==10">
+                            <i class="el-icon-check" v-if="scope.row.isSync == 1" title="已同步" style="color:forestgreen;font-size:16px"></i>
+                            <i class="el-icon-loading" v-if="scope.row.isSync == 0" title="等待同步" style="color:orangered;font-size:16px"></i>
+                        </div>
+                        <i v-if="scope.row.platformId!=10">-</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="140" prop="requestSyncTimeString" label="同步时间">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.requestSyncTimeString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="130" label="操作" fixed="right">
+                    <template slot-scope="scope">
+                        @*<el-dropdown trigger="click">
+                                <el-button type="primary" size="small" class="mb5">
+                                    操作
+                                    <i class="el-icon-caret-bottom el-icon--right"></i>
+                                </el-button>
+                                <el-dropdown-menu slot="dropdown">
+                                    <el-dropdown-item>
+                                        <div v-on:click="edit(scope.row.id)">修改</div>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item>
+                                        <div v-on:click="del(scope.$index, scope.row.id)">删除</div>
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>*@
+                        <el-dropdown trigger="click" v-if="scope.row.status!=0">
+                            <el-button type="warning" plain size="mini" class="mb5">
+                                状态维护
+                                <i class="el-icon-caret-bottom el-icon--right"></i>
+                            </el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item>
+                                    <div v-on:click="updatePriceStatus(scope.$index, scope.row.id, 0)">审核通过</div>
+                                </el-dropdown-item>
+                                <el-dropdown-item>
+                                    <div v-on:click="updatePriceStatus(scope.$index, scope.row.id, 2)">审核不通过</div>
+                                </el-dropdown-item>
+
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                        <el-button v-if="!scope.row.isSync&&scope.row.platformId==10&&scope.row.status == 0" plain size="mini" class="mb5" v-on:click="syncItemPrice(scope.$index, scope.row.id,scope.row.retailPriceString,scope.row.validTimeString)">
+                            下发价格
+                            <i class="el-icon-sort"></i>
+                        </el-button>
+                        @*<el-button type="danger" plain size="small" class="mb5">
+                                删除
+                            </el-button>*@
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-col :span="24" class="toolbar">
+                <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="page" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+                </el-pagination>
+            </el-col>
+        </article>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    listLoading: false,
+                    itemPriceList: [],
+                    platformlist: [],
+                    filters: {
+                        searchKey: "",
+                        platformId: void 0
+                    },
+                    total: 30,
+                    page: 1,
+                    pageSize: 10,
+                }
+            },
+            created() {
+                this.GetPlatformList();
+                this.getItemPriceRecordList();
+            },
+            methods: {
+                syncItemPrice(index, itemId, prePrice, validTime) {
+                    var _self = this;
+                    $.ajax({
+                        type: 'get',
+                        url: '/rest/item/price/sync',
+                        data: { itemId: itemId, preRetailPrice: prePrice, validTimeString: validTime },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$notify.success({
+                                    title: '成功',
+                                    message: "价格下发成功"
+                                });
+                                _self.itemPriceList[index].isSync = 1;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                        }
+                    });
+                },
+                //【获取平台列表】
+                GetPlatformList() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        async: false,
+                        url: '/rest/item/platform/list',
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.platformlist = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                // 改变每页显示几条数据
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getItemPriceRecordList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getItemPriceRecordList();
+                },
+
+                getItemPriceRecordList() {
+                    this.listLoading = true;
+                    var _self = this;
+                    var platformId = 0;
+                    if (_self.filters.platformId != null && _self.filters.platformId != '') {
+                        //alert(111)
+                        platformId = _self.filters.platformId
+                    }
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/item/price/record/list',
+                        async: false,
+                        data: { key: _self.filters.searchKey, platformId: platformId, itemId: '', pageSize: _self.pageSize, currentPage: _self.page },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.page.totalCount;
+                                _self.itemPriceList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                            _self.listLoading = false;
+                        }
+                    });
+                },
+                search() {
+                    this.getItemPriceRecordList();
+                },
+                updatePriceStatus(index, id, status) {
+                    var _self = this;
+                    this.$confirm("确定修改状态吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '/rest/item/price/status/update',
+                            data: { id: id, status: status },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.itemPriceList[index].status = status;
+                                    _self.$notify.success({
+                                        title: '成功',
+                                        message: "更新状态成功"
+                                    });
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                },
+            }
+        }
+        var Ctor = Vue.extend(Main)
+        new Ctor().$mount('#skulist')
+    </script>
+
+</body>

@@ -1,0 +1,416 @@
+﻿
+@{
+    ViewData["Title"] = "Platform";
+}
+
+<style>
+    .el-badge__content.is-fixed {
+        top: 10px;
+        right: 0;
+    }
+</style>
+<body class="plr20">
+    <div id="platformList">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>系统管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>平台管理</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <!--工具条-->
+        <!--工具条-->
+        <el-col :span="24" class="toolbar">
+            <el-form :inline="true" size="small" :model="filters">
+                <el-form-item>
+                    <el-input placeholder="关键字" v-model="filters.searchKey" clearable></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button icon="el-icon-search" v-on:click="search">查询</el-button>
+                    <el-button type="primary" icon="el-icon-plus" v-on:click="openCreateForm">新增</el-button>
+                </el-form-item>
+
+            </el-form>
+        </el-col>
+
+        <!--列表-->
+        <el-table :data="platformlist" size="mini" highlight-current-row v-loading="listLoading" style="width: 100%">
+            <el-table-column prop="id" label="Id" width="100" fixed="left" sortable></el-table-column>
+            <el-table-column prop="eName" width="240" label="英文名称"></el-table-column>
+            <el-table-column prop="cName" width="240" label="中文名称"></el-table-column>
+            <el-table-column label="操作" min-width="200" fixed="right">
+                <template slot-scope="scope">
+                    <el-button type="warning" plain size="mini" v-on:click="openEditForm(scope.row)">编 辑</el-button>
+                    <el-button type="danger" size="mini" v-on:click="delPlatform(scope.row.id)">删 除</el-button>
+                    <el-button plain size="mini" v-on:click="openUsersForm(scope.row)">用 户</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <!--工具条-->
+        <el-col :span="24" class="toolbar">
+            <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="page" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+            </el-pagination>
+        </el-col>
+
+        <!--详情界面-->
+        <el-dialog :title="title" :visible.sync="detailFormVisible" :close-on-click-modal="false" top="5%" width="600px">
+            <el-form :model="detailForm" size="small" label-width="150px" class="detailForm">
+                <el-form-item label="英文名称：">
+                    <el-input v-model="detailForm.eName" style="width:350px"></el-input>
+                </el-form-item>
+                <el-form-item label="中文名称：">
+                    <el-input v-model="detailForm.cName" style="width:350px"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" size="small" v-on:click="savePlatform">保 存</el-button>
+            </div>
+        </el-dialog>
+        <el-dialog :title="usersForm.title" :visible.sync="usersForm.isShow" top="5%" width="600px">
+            <el-table :data="usersForm.list" style="width: 100%" size="mini" v-loading="dialogLoading">
+                <el-table-column prop="id" label="Id" width="180">
+                </el-table-column>
+                <el-table-column prop="fullName" label="姓名">
+                </el-table-column>
+            </el-table>
+            <el-pagination small
+                           v-on:current-change="handleCurrentChangeUsrs"
+                           layout="prev, pager, next"
+                           :current-page.sync="usersForm.currentPage"
+                           :total="usersForm.total">
+            </el-pagination>
+        </el-dialog>
+    </div>
+
+</body>
+@section Scripts{
+    <script>
+        var Main = {
+            data() {
+                return {
+                    filters: {
+                        searchKey: '',
+                        type: void 0,
+                    },
+                    total: 0,
+                    page: 1,
+                    currentPage: 1,
+                    pageSize: 10,
+                    listLoading: false,
+                    //详情界面
+                    detailFormVisible: false,
+                    detailForm: {
+                        id: 0,
+                        eName: void 0,
+                        cName: void 0
+                    },
+                    title: void 0,
+                    platformlist: [],
+                    dialogLoading: false,
+                    usersForm: {
+                        isShow: false,
+                        list: [],
+                        title: "",
+                        id:0,
+                        currentPage: 1,
+                        total: 0,
+                    },
+                };
+            },
+            created() {
+                this.getPlatformList();
+            },
+            methods: {
+                openEditForm: function (row) {
+                    var _self = this;
+                    _self.title = "编辑:" + row.eName;
+                    _self.detailFormVisible = true;
+                    $.ajax({
+                        type: 'GET',
+                        url: '../../rest/platform/detail/' + row.id,
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.detailForm = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                openCreateForm: function () {
+                    this.title = "新增";
+                    this.detailFormVisible = true;
+                    this.detailForm.id = 0;
+                    this.detailForm.eName = void 0;
+                    this.detailForm.cName = void 0;
+                },
+                //改变每页显示数据条数
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getPlatformList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.currentPage = val;
+                    this.getPlatformList();
+                },
+                search: function () {
+                    this.getPlatformList();
+                },
+                getPlatformList() {
+                    var _self = this;
+                    _self.listLoading = true;
+                    $.ajax({
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/platform/list/page/get',
+                        data: JSON.stringify({ searchKey: _self.filters.searchKey, pageSize: _self.pageSize, currentPage: _self.currentPage }),
+                        success: function (data) {
+                            if (data.success) {
+                                _self.total = data.page.totalCount;
+                                _self.platformlist = data.data;
+                                _self.listLoading = false;
+                            } else {
+                                _self.listLoading = false;
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.listLoading = false;
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                savePlatform() {
+                    var _self = this;
+                    try {
+                        if (_self.detailForm.id > 0) {
+                            $.ajax({
+                                type: 'POST',
+                                dataType: 'json',
+                                contentType: 'application/json',
+                                url: '../../rest/platform/update',
+                                data: JSON.stringify(_self.detailForm),
+                                success: function (data) {
+                                    if (data.success == true) {
+                                        _self.$notify({
+                                            title: '成功',
+                                            message: '保存成功！',
+                                            type: 'success'
+                                        });
+                                        _self.detailFormVisible = false;
+                                        _self.getPlatformList();
+                                    }
+                                    else {
+                                        _self.$notify.error({
+                                            title: '错误',
+                                            message: data.msg
+                                        });
+                                    }
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    if (errorThrown == "Unauthorized") {
+                                        window.parent.MainIndex.openLoginFrom();
+                                        _self.$message({
+                                            type: 'error',
+                                            message: XMLHttpRequest.responseJSON.msg
+                                        });
+                                    } else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: errorThrown
+                                        });
+                                    }
+                                }
+                            });
+                        } else {
+                            $.ajax({
+                                type: 'POST',
+                                dataType: 'json',
+                                contentType: 'application/json',
+                                url: '../../rest/platform/create',
+                                data: JSON.stringify(_self.detailForm),
+                                success: function (data) {
+                                    if (data.success == true) {
+                                        _self.$notify({
+                                            title: '成功',
+                                            message: '创建平台成功！',
+                                            type: 'success'
+                                        });
+                                        _self.detailFormVisible = false;
+                                        _self.getPlatformList();
+                                    }
+                                    else {
+                                        _self.$notify.error({
+                                            title: '错误',
+                                            message: data.msg
+                                        });
+                                    }
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    if (errorThrown == "Unauthorized") {
+                                        window.parent.MainIndex.openLoginFrom();
+                                        _self.$message({
+                                            type: 'error',
+                                            message: XMLHttpRequest.responseJSON.msg
+                                        });
+                                    } else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: errorThrown
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    finally {
+                        _self.loading = false
+                    }
+                },
+                //分类删除常量
+                delPlatform(id) {
+                    var _self = this;
+                    this.$confirm("确定删除吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        _self.listLoading = true;
+
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            async: false,
+                            url: '../../rest/platform/delete/' + id,
+                            success: function (data) {
+                                if (data.success && data.code == 0) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '删除成功!'
+                                    });
+                                    _self.getPlatformList();
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                                _self.listLoading = false;
+
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                _self.listLoading = false;
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                },
+                //【打开授权用户列表弹窗】
+                openUsersForm: function (row) {
+                    var _self = this;
+                    _self.dialogLoading = true;
+                    _self.usersForm.title = row.eName + "的授权用户:";
+                    _self.usersForm.isShow = true;
+                    _self.usersForm.currentPage = 1;
+                    _self.usersForm.id = row.id;
+                    _self.getGrantesUsers();
+                    
+                },
+                getGrantesUsers() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: '../../rest/platform/granted/users',
+                        data: { paltformId: _self.usersForm.id, currentPage: _self.usersForm.currentPage },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.usersForm.list = data.data;
+                                _self.usersForm.total = data.page.totalCount;
+                                _self.dialogLoading = false;
+
+                            } else {
+                                _self.dialogLoading = false;
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            _self.dialogLoading = false;
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: "未登入"
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //【点击第几页】
+                handleCurrentChangeUsrs(val) {
+                    this.currentPage = val;
+                    this.getGrantesUsers();
+                },
+            }
+        }
+        var Ctor = Vue.extend(Main)
+        new Ctor().$mount('#platformList')
+    </script>
+}
+
+

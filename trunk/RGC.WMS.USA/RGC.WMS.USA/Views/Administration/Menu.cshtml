@@ -1,0 +1,1223 @@
+﻿
+@{
+    ViewData["Title"] = "Menu";
+}
+@section Styles{
+    <link href="/view-resources/Views/Administration/menu.css" rel="stylesheet" />
+
+}
+
+<div id="menu" class="p15 bac01 h100b bsb">
+    <el-card class="el-card--plr h100b">
+        <el-row class=" h100b">
+            <!-- 左侧菜单树 -->
+            <el-col :span="6" class="h100b">
+                <div class="pt20 h100b bsb">
+                    <el-tree :data="menulist"
+                             :props="defaultProps"
+                             node-key="id"
+                             ref="tree"
+                             getCurrentNode=""
+                             :highlight-current="true"
+                             v-on:node-click="handleNodeClick"
+                             class="menu-tree mt10"
+                             default-expand-all
+                             :expand-on-click-node="false">
+                        <p slot-scope="{ node, data }">
+                            <span>
+                                <span>
+                                    <i class="iconfont icon_catalog" v-if="data.type==1"></i>
+                                    <i class="iconfont icon_liulanqi" v-if="data.type==2"></i>
+                                    <i class="iconfont icon_function1" v-if="data.type==3"></i>
+                                    {{node.label}}
+                                </span>
+                            </span>
+                            <span style="float:right;right:20px">
+                                <i class="el-icon-refresh" v-on:click.stop="() => refreshMenu()" v-if="node.level==1"></i>
+                            </span>
+                        </p>
+                    </el-tree>
+                </div>
+            </el-col>
+            <!-- 分割线 -->
+            <el-col :span="1" class="h100b">
+                <el-divider direction="vertical" class="h100b"></el-divider>
+            </el-col>
+            <!-- 右侧内容 -->
+            <el-col :span="17" class="pt25 h100b" v-loading="rightLoading">
+                @*没有选中菜单*@
+                <div v-if="chooseMenu==null">
+                    <p class="fs22">
+                        {{checkName}}
+                    </p>
+                    <p class="mt20 c02 fs14 mb10">
+                        在这里添加或编辑菜单设置
+                    </p>
+                </div>
+                @*有选中菜单*@
+                <div v-if="chooseMenu>=0">
+                    @*标题*@
+                    <p>
+                        <span class="fs22">{{checkName}}</span>
+                        <el-button size="mini" class="ml10" v-on:click="openDetailEdit">编辑</el-button>
+                    </p>
+                    @*路径*@
+                    <p class="mt10">
+                        <el-breadcrumb separator-class="el-icon-arrow-right">
+                            <el-breadcrumb-item v-for="(item,index) in breadList" :key="index">
+                                <el-button type="text" :disabled="index >= breadList.length-1" v-on:click="positionTree(item)">{{item.name}}</el-button>
+                            </el-breadcrumb-item>
+                        </el-breadcrumb>
+                    </p>
+                </div>
+                @*内容 折叠面板 列表*@
+                <el-collapse v-model="activeNames" class="collapse--simple" v-on:change="handleChange">
+                    @*详细信息*@
+                    <el-collapse-item ref="collapse1" v-if="chooseMenu>-1" name="1" v-loading="detailLoading">
+                        <template slot="title">
+                            <p class="fs20 c01">
+                                <i class="iconfont icon_detail fs20"></i>
+                                <span class="fs22">详细信息</span>
+                            </p>
+                        </template>
+                        <div class="mt10 pl27">
+                            <el-form :inline="true" :model="currMenu" ref="currMenu" class="skuform" label-width="100px" label-position="left" size="mini">
+                                <el-row>
+                                    <el-col :span="8">
+                                        <el-form-item label="排序：" prop="seqNo">
+                                            {{currMenu.seqNo}}
+                                        </el-form-item>
+                                    </el-col>
+                                    <el-col :span="8">
+                                        <el-form-item label="显示名称：" prop="name">
+                                            {{currMenu.name}}
+                                        </el-form-item>
+                                    </el-col>
+                                    <el-col :span="8">
+                                        <el-form-item label="菜单类型：" prop="type">
+                                            <el-tag size="mini" type="danger" v-if="currMenu.type==0">系统</el-tag>
+                                            <el-tag size="mini" type="primary" v-if="currMenu.type==1">目录</el-tag>
+                                            <el-tag size="mini" type="success" v-if="currMenu.type==2">菜单</el-tag>
+                                            <el-tag size="mini" type="warning" v-if="currMenu.type==3">功能</el-tag>
+                                        </el-form-item>
+                                    </el-col>
+                                </el-row>
+                                <el-row v-if="currMenu.type!=3">
+                                    <el-col :span="8">
+                                        <el-form-item label="连接目标：">
+                                            <p>当前窗口</p>
+                                            @*<p v-if="currMenu.target==2">菜单</p>*@
+                                        </el-form-item>
+                                    </el-col>
+                                    <el-col :span="8">
+                                        <el-form-item label="请求地址：">
+                                            {{currMenu.path}}
+
+                                        </el-form-item>
+                                    </el-col>
+                                    <el-col :span="8">
+                                        <el-form-item label="图标名称：">
+                                            {{currMenu.icoName}}
+
+                                        </el-form-item>
+                                    </el-col>
+                                </el-row>
+                                <el-row>
+                                    <el-col :span="8">
+                                        <el-form-item label="状态：">
+                                            <p v-if="currMenu.isShow==1"><i class="disc disc--green mr10"></i>可见</p>
+                                            <p v-if="currMenu.isShow==0"><i class="disc disc--gray mr10"></i>不可见</p>
+                                        </el-form-item>
+                                    </el-col>
+                                    <el-col :span="8">
+                                        <el-form-item label="权限名：">
+                                            {{currMenu.authorizeCode}}
+
+                                        </el-form-item>
+                                    </el-col>
+                                    <el-col :span="8">
+                                        <el-form-item label="备注：">
+                                            {{currMenu.remark}}
+
+                                        </el-form-item>
+                                    </el-col>
+                                </el-row>
+
+                            </el-form>
+                        </div>
+                    </el-collapse-item>
+                    @*子集设置*@
+                    <el-collapse-item ref="collapse2" name="2" v-loading="childrenLoading" v-if="(chooseMenu==null&&menulist[0].children.length==0)||(chooseMenu>0)">
+                        <template slot="title">
+                            <p class="fs20 c01">
+                                <i class="iconfont icon_sublevel"></i>
+                                <span class="fs22">子集设置</span>
+                            </p>
+                        </template>
+                        <p class="bac02 pl10 ptb5 mt10">
+                            <el-button type="primary" :disabled="isSort" size="mini" v-on:click="openAddPartForm">添加子集</el-button>
+                            <el-button size="mini" v-on:click="startSort" :disabled="childData.length==0||isSort">调整排序</el-button>
+                        </p>
+                        @*保存取消 拖拽*@
+                        <el-collapse-transition>
+                            <p class="tc bac03 lh30 fs14" v-show="sortSaveShow">
+                                上下移动调整位置
+                                <el-button class="ml10" type="text" v-on:click="saveSort">保存</el-button>
+                                <el-button type="text" v-on:click="endSort">取消</el-button>
+                            </p>
+                        </el-collapse-transition>
+                        @*无数据*@
+                        <p class="tc lh30 fs14" v-if="childData.length==0">
+                            <span class="c02">当前无数据</span>
+                            <el-button class="ml10" type="text" v-on:click="openAddPartForm">添加子集</el-button>
+                        </p>
+                        @*有数据*@
+                        <el-table :data="childData.slice(0,dataEnd)"
+                                  v-if="childData.length>0"
+                                  @*:max-height="sortListMaxHeight"*@
+                                  class="table--sort"
+                                  highlight-current-row
+                                  row-key="id"
+                                  size="mini"
+                                  @*row-click="rowClick"*@
+                                  :row-class-name="isSort&&'cursor'"
+                                  :tree-props="{children: 'childrens'}">
+                            <el-table-column width="25" class="fs12">
+                                <template scope="scope">
+                                    <i class="iconfont icon_rank" v-show="isSort"></i>
+                                </template>
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="name" label="菜单名称">
+                                <template scope="scope">
+                                    <el-link v-on:click="!isSort&&positionTree(scope.row)" v-if="chooseMenu>=0" :class="{cursor:isSort}" :underline="false">{{scope.row.name}}</el-link>
+                                    <el-link v-on:click="!isSort&&tableClick(scope.row.id)" v-if="!chooseMenu>0" :class="{cursor:isSort}" :underline="false">{{scope.row.name}}</el-link>
+                                </template>
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="seqNo" label="排序">
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="type" label="菜单类型">
+                                <template scope="scope">
+                                    <el-tag size="mini" type="danger" v-if="scope.row.type==0">系统</el-tag>
+                                    <el-tag size="mini" type="primary" v-if="scope.row.type==1">目录</el-tag>
+                                    <el-tag size="mini" type="success" v-if="scope.row.type==2">菜单</el-tag>
+                                    <el-tag size="mini" type="warning" v-if="scope.row.type==3">功能</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="100">
+                                <template scope="scope">
+                                    <el-popover placement="top"
+                                                v-model="scope.row.visible">
+                                        <p class="mt5 mb10">确定删除该项吗？</p>
+                                        <div style="text-align: right; margin: 0">
+                                            <el-button size="mini" type="text" v-on:click="scope.row.visible = false">取消</el-button>
+                                            <el-button type="warning" size="mini" v-on:click="removeTable(scope.$index,scope.row)">确定</el-button>
+                                        </div>
+                                        <el-button slot="reference" size="mini" type="danger" plain :disabled="isSort">删除</el-button>
+                                    </el-popover>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        @*查看全部*@
+                        <el-button v-if="childData.length>10&&dataEnd!=childData.length&&!isSort" class="ml25" type="text" v-on:click="expandAll">查看全部 <i class="el-icon-arrow-down"></i></el-button>
+                        <el-button v-if="childData.length>10&&dataEnd==childData.length&&!isSort" class="ml25" type="text" v-on:click="expandPart">折叠 <i class="el-icon-arrow-up"></i></el-button>
+                    </el-collapse-item>
+                </el-collapse>
+            </el-col>
+        </el-row>
+    </el-card>
+
+    <!--编辑界面-->
+    <el-drawer :visible.sync="currMenuVisible"
+               direction="rtl"
+               size="40%"
+               :show-close="false"
+               :before-close="closeEdit"
+               :wrapper-closable="true"
+               ref="editPage"
+               custom-class="menu-drawer">
+        <span slot="title">
+            <span>编辑</span>
+            <i class="el-icon-close fr" @@click="currMenuVisible=false"></i>
+        </span>
+        <div class="menu-drawer__content">
+            @*editPageForm*@
+            <el-form :model="editForm" label-width="120px" size="mini" :rules="rulesEditForm" ref="editForm">
+                <el-form-item label="上级菜单" v-if="editForm.type!=0">
+                    {{breadList.length>2?breadList[breadList.length-2].name:systemName}}
+                </el-form-item>
+                <el-form-item label="显示名称" prop="name">
+                    <el-input v-model="editForm.name" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="排序" prop="seqNo">
+                    <el-input-number v-model="editForm.seqNo" :min="0" label="菜单排序"></el-input-number>
+                </el-form-item>
+                <el-form-item label="菜单类型" prop="type">
+                    <el-radio-group v-model="editForm.type" :disabled="editForm.type==0">
+                        <el-radio :label="0" :disabled="editForm.type!=0">系统</el-radio>
+                        <el-radio :label="1">目录</el-radio>
+                        <el-radio :label="2">菜单</el-radio>
+                        <el-radio :label="3">功能</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="权限名" prop="authorizeCode">
+                    <el-input v-model="editForm.authorizeCode" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item v-if="editForm.type!=3" label="连接目标">
+                    <el-select placeholder="请选择连接目标" clearable v-model="conTarget" size="mini">
+                        <el-option v-for="item in targets"
+                                   :key="item.id"
+                                   :label="item.name"
+                                   :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item v-if="editForm.type!=3" label="请求地址" prop="path">
+                    <el-input v-model="editForm.path" auto-complete="off"></el-input>
+                </el-form-item>
+                @*目录类型=>显示图标选择*@
+                <el-form-item v-if="editForm.type==1" label="图标名称" prop="icoName">
+                    <el-select v-model="editForm.icoName" placeholder="请选择" popper-class="icon-select" allow-create default-first-option filterable>
+                        <el-option v-for="item in iconData" :key="item" :value="item" :label="item">
+                            <i :class='"iconfont " + item'></i>
+                            <span class="pl10">{{item}}</span>
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="备注" prop="remark">
+                    <el-input type="textarea" v-model="editForm.remark" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item prop="isShow">
+                    <el-checkbox @*v-model="editForm.isShow"*@ checked disabled>菜单可见</el-checkbox>
+                </el-form-item>
+            </el-form>
+            <div class="drawer__footer--bottom">
+                <el-button size="mini" v-on:click="currMenuVisible=false">取消</el-button>
+                <el-popover placement="top"
+                            v-model="deleteVisible">
+                    <p class="mt5 mb10">确定删除该项吗？</p>
+                    <div style="text-align: right; margin: 0">
+                        <el-button size="mini" type="text" v-on:click="deleteVisible = false">取消</el-button>
+                        <el-button type="warning" size="mini" v-on:click="removeMenu(editForm.id)">确定</el-button>
+                    </div>
+                    <el-button slot="reference" size="mini" type="danger" plain :disabled="isSort">删除</el-button>
+                </el-popover>
+                @*<el-button size="mini" type="danger" :loading="editLoading" plain>删除</el-button>*@
+                <el-button size="mini" type="primary" v-on:click="editSubmit" :loading="editLoading">保存</el-button>
+            </div>
+        </div>
+
+    </el-drawer>
+
+    <!--添加子集-->
+    <el-drawer :visible.sync="addPartFormVisible"
+               direction="rtl"
+               size="40%"
+               :show-close="false"
+               :before-close="closeAddPart"
+               :wrapper-closable="true"
+               ref="addPart"
+               custom-class="menu-drawer">
+        <span slot="title">
+            <span>添加子集</span>
+            <i class="el-icon-close fr" @@click="addPartFormVisible=false;resetForm('addPartForm');"></i>
+        </span>
+        <div class="menu-drawer__content">
+            @*addPartForm*@
+            <el-form :model="addPartForm" label-width="120px" size="mini" :rules="rulesAddPartForm" ref="addPartForm" style="flex:1">
+                <el-form-item label="上级菜单">
+                    {{checkName}}
+                </el-form-item>
+                <el-form-item label="显示名称" prop="name">
+                    <el-input v-model="addPartForm.name" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="菜单排序" prop="seqNo">
+                    <el-input-number v-model="addPartForm.seqNo" :min="0" label="菜单排序"></el-input-number>
+                </el-form-item>
+                <el-form-item label="菜单类型" prop="type">
+                    <el-radio-group v-model="addPartForm.type">
+                        <el-radio :label="0" disabled>系统</el-radio>
+                        <el-radio :label="1">目录</el-radio>
+                        <el-radio :label="2">菜单</el-radio>
+                        <el-radio :label="3">功能</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="权限名" prop="authorizeCode">
+                    <el-input v-model="addPartForm.authorizeCode" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item v-if="addPartForm.type!=3" label="连接目标">
+                    <el-select placeholder="请选择连接目标" v-model="conTarget" size="mini">
+                        <el-option v-for="item in targets"
+                                   :key="item.id"
+                                   :label="item.name"
+                                   :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item v-if="addPartForm.type!=3" label="请求地址" prop="path">
+                    <el-input v-model="addPartForm.path" auto-complete="off"></el-input>
+                </el-form-item>
+                @*目录类型=>显示图标选择*@
+                <el-form-item v-if="addPartForm.type==1" label="图标名称" prop="icoName">
+                    <el-select v-model="addPartForm.icoName" placeholder="请选择" popper-class="icon-select" allow-create default-first-option filterable>
+                        <el-option v-for="item in iconData" :key="item" :value="item" :label="item">
+                            <i :class='"iconfont " + item'></i>
+                            <span class="pl10">{{item}}</span>
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="备注" prop="remark">
+                    <el-input type="textarea" v-model="addPartForm.remark" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item prop="isShow">
+                    <el-checkbox v-model="addPartForm.isShow" disabled>菜单可见</el-checkbox>
+                </el-form-item>
+            </el-form>
+            <div class="drawer__footer--bottom">
+                <el-button size="mini" v-on:click="addPartFormVisible=false;resetForm('addPartForm');">取消</el-button>
+                <el-button size="mini" type="primary" v-on:click="addPartSubmit" :loading="editLoading">保存</el-button>
+            </div>
+        </div>
+    </el-drawer>
+
+</div>
+
+<script src="../js/Sortable.js"></script>
+
+<script>
+    var Main = {
+        data() {
+            return {
+                detailLoading: false,//右侧详细信息loading
+                rightLoading: false,//右侧全部loading
+                childrenLoading: false,//右侧子集loading
+                iconData: ['icon_default', 'icon_customer', 'icon_contact', 'icon_system', 'icon_order', 'icon_product', 'icon_Administrators', 'icon_zhexiantu', 'icon_depart', 'icon_jiaoyi', 'icon_message', 'icon_manage', 'icon_Ordermanagement', 'icon_Administrators', 'icon_log'],
+                dataEnd: 10,
+                sortListMaxHeight: '1000',
+                activeNames: ['1', '2'],//折叠面板 选中值
+                sortFuc: void 0,
+                // 分页
+                total: 30,
+                page: 1,
+                currentPage: 1,
+                pageSize: 5,
+                conTarget: 1,
+                targets: [
+                    {
+                        id: 1,
+                        name: '当前窗口'
+                    }
+                ],
+                deleteVisible: false,//表格loading
+                listLoading: false,//表格loading
+                sortSaveShow: false,//保存拖拽 行 显示隐藏
+                isSort: false,//是否启用排序
+                chooseMenu: void 0,
+                breadList: [],
+                options: [],
+                childData: [],//子集列表
+                defaultProps: {
+                    children: 'children',
+                    label: 'name',
+                    path: 'path',
+                    type: 'type'
+                },
+                /*==编辑界面==*/
+                editFormVisible: false,//是 否显示
+                currMenuVisible: false,//是 否显示
+                addPartFormVisible: false,//子集抽屉是 否显示
+                addSystemVisible: false,//是 否显示
+                filterText: '',//是 否显示
+                checkName: '请添加/选择菜单',//是 否显示
+                systemName: '全部菜单',//是 否显示
+                editLoading: false,
+                editFormRules: {
+                    seqNo: [
+                        { required: true, message: '请输入序号', trigger: 'blur' }
+                    ],
+                    name: [
+                        { required: true, message: '请输入权限名', trigger: 'blur' }
+                    ],
+                },
+                //右侧 编辑表单
+                editForm: {
+                    id: 0,
+                    seqNo: 0,
+                    path: '',
+                    type: 1,
+                    parentId: 0,
+                    authorizeCode: void 0,
+                    name: '',
+                    icoName: '',
+                    isShow: true,
+                    remark: '',
+                },
+                rulesEditForm: {
+                    name: [
+                        { required: true, message: '请输入名称', trigger: 'blur' },
+                    ],
+                    seqNo: [
+                        { required: true, message: '请输入排序', trigger: 'blur' },
+                    ],
+                    type: [
+                        { required: true, message: '请选择菜单', trigger: 'blur' },
+                    ],
+                    authorizeCode: [
+                        { required: true, message: '请输入权限名', trigger: 'blur' }
+                    ],
+                },
+                //右侧 新增子集表单
+                addPartForm: {
+                    id: 0,
+                    seqNo: 0,
+                    path: '',
+                    type: 1,
+                    parentId: 0,
+                    authorizeCode: void 0,
+                    name: '',
+                    icoName: 'icon_default',
+                    isShow: true,
+                    remark: '',
+                },
+                rulesAddPartForm: {
+                    name: [
+                        { required: true, message: '请输入名称', trigger: 'blur' },
+                    ],
+                    seqNo: [
+                        { required: true, message: '请输入排序', trigger: 'blur' },
+                    ],
+                    type: [
+                        { required: true, message: '请选择菜单', trigger: 'blur' },
+                    ],
+                    authorizeCode: [
+                        { required: true, message: '请输入权限名', trigger: 'blur' }
+                    ],
+                },
+                //右侧 新增系统表单
+                addSystemForm: {
+                    id: 0,
+                    seqNo: 0,
+                    path: '',
+                    type: 0,
+                    parentId: 0,
+                    authorizeCode: void 0,
+                    name: '',
+                    icoName: 'icon_default',
+                    isShow: true,
+                    remark: '',
+                },
+                rulesAddSystemForm: {
+                    name: [
+                        { required: true, message: '请输入名称', trigger: 'blur' },
+                    ],
+                    seqNo: [
+                        { required: true, message: '请输入排序', trigger: 'blur' },
+                    ],
+                    authorizeCode: [
+                        { required: true, message: '请输入权限名', trigger: 'blur' }
+                    ],
+                },
+                currMenu: {
+                    id: 0,
+                    name: '',
+                    authorizeCode: '',
+                    seqNo: 0,
+                    path: '',
+                    type: 2,
+                    parentId: 0,
+                    isDeleted: false,
+                    icoName: '',
+                    isShow: true,
+                    remark: '',
+                },
+                menulist: [{
+                    id: 0,
+                    name: "全部菜单",
+                    type: 1,
+                    children: []
+                }],
+            };
+        },
+        created() {
+            this.getLeftMenus();
+        },
+        mounted() {
+            var _self = this;
+        },
+        methods: {
+             //【右侧组织列表点击 和 面包屑点击】
+            setCurrMenu(id, name) {
+                this.currMenu.id = id;
+                //关闭排序
+                this.isSort = false;
+                this.sortSaveShow = false;
+                if (id != 0) {
+                    this.$refs.tree.setCurrentKey(id);//选中左侧菜单
+                    var data = { 'id': id, 'name': name };
+                    this.handleNodeClick(data);//模拟点击左侧菜单-》加载数据
+                }
+
+            },
+            //【展开全部】
+            expandAll() {
+                this.dataEnd = this.childData.length
+            },
+            //【折叠】
+            expandPart() {
+                this.dataEnd = 10
+            },
+            //【折叠面板 状态改变 点击】
+            handleChange(val) {
+                //this.setSortListMaxHeight();
+            },
+            //【子集设置 点击调整排序按钮】
+            startSort() {
+                if (this.childData.length > 0) {
+                    this.dataEnd = this.childData.length
+                    this.isSort = true;//显示 拖拽可排序 提示行
+                    //this.activeNames = ['2'];//只展开排序的折叠面板
+                    //this.setSortListMaxHeight();
+                    this.sortSaveShow = true;
+                    var self = this
+                    var table = document.querySelector('.el-table__body-wrapper tbody')
+                    self.sortFuc = Sortable.create(table, {
+                        onEnd({ newIndex, oldIndex }) {
+                            const targetRow = self.childData.splice(oldIndex, 1)[0]
+                            self.childData.splice(newIndex, 0, targetRow)
+                            for (var i = 0; i < self.childData.length; i++) {
+                                self.childData[i].seqNo = i + 1;
+                            }
+                        }
+                    })
+                }
+            },
+            //【取消排序】
+            endSort() {
+                this.dataEnd = 10
+                this.isSort = false;//隐藏 拖拽可排序
+                this.sortSaveShow = false;
+                //this.setSortListMaxHeight();
+                if (this.currMenu.id > 0 && this.chooseMenu >= 0) {
+                    this.getMenuDetail(this.currMenu.id);
+                } else {
+                    this.getParentMenus();
+                }
+                if (this.sortFuc != null) {
+                    try {
+                        this.sortFuc.destroy();
+                    } catch (e) {
+
+                    }
+                }
+            },
+            //【销毁当页排序】
+            destorySort() {
+                this.dataEnd = 10
+                this.isSort = false;//隐藏 拖拽可排序
+                this.sortSaveShow = false;
+                //this.setSortListMaxHeight();
+                if (this.sortFuc != null){
+                    try {
+                        this.sortFuc.destroy();
+                    } catch (e) {
+
+                    }
+                }
+            },
+            //【初始化排序】
+            initSort() {
+                this.dataEnd = 10
+                this.isSort = false;//隐藏 拖拽可排序
+                this.sortSaveShow = false;
+                //this.setSortListMaxHeight();
+                this.sortFuc = void 0
+            },
+            //【打开编辑抽屉】
+            openDetailEdit() {
+                this.destorySort();
+                this.currMenuVisible = true;
+                this.editForm = Object.assign({}, this.currMenu);
+            },
+            //【打开子集添加抽屉】
+            openAddPartForm() {
+                //this.destorySort();
+                if (this.sortFuc != null){
+                    try {
+                        this.sortFuc.destroy();
+                    } catch (e) {
+
+                    }
+                }
+                if (this.chooseMenu >= 0) {
+                    this.addPartFormVisible = true;
+                    this.addPartForm.parentId = this.chooseMenu
+                    this.addPartForm.type = 1
+                }
+            },
+            //【打开系统添加抽屉】
+            openAddSystemForm() {
+                this.destorySort();
+                if (this.chooseMenu >= 0) {
+
+
+                } else {
+                    this.addSystemVisible = true;
+                    this.addSystemForm.parentId = 0
+                    this.addSystemForm.type = 0
+
+                }
+            },
+            //【列表菜单名称点击事件】
+            tableClick(data) {
+
+                var name = ""
+                this.breadList = []
+                if (data == null | data == "") {
+                    this.checkName = "请添加/选择菜单"
+                    this.childData = []
+                    this.menulist = [{
+                        id: 0,
+                        name: "全部菜单",
+                        type: 1,
+                        children: []
+                    }]
+                    this.currMenu.id = 0;
+                    this.childData = this.options;
+                    return
+                }
+                for (var key in this.options) {
+                    if (this.options[key].id == data) {
+                        name = this.options[key].name
+                    }
+                }
+                //this.breadList.push({ name: name, id: -1 })
+                this.breadList.push({ name: "全部菜单", id: 0 })
+                this.checkName = name;// "全部菜单"
+                if (!this.chooseMenu >= 0) {
+                    this.chooseMenu = data
+                    this.systemName = name;
+                }
+                //this.$refs.tree.setCurrentKey(0)
+
+
+                this.getMenus(false);
+                this.getMenuDetail(data);
+                this.initSort();
+
+            },
+            //【面包屑点击事件】
+            positionTree(row) {
+                this.rightLoading = true;
+                //if (row.id == -1) {
+                //    row.id = 0
+                //    row.name = "全部菜单"
+                //}
+                if (row.id <= 0) {
+                    row.id = 0
+                }
+                if (row.id > 0) {
+                    this.getMenuDetail(row.id);
+                } else {
+                    this.getMenuDetail(this.chooseMenu);
+                }
+                var _self = this;
+                this.$refs.tree.setCurrentKey(row.id)
+                this.breadList = [];
+                var parent = this.$refs.tree.getNode(this.$refs.tree.getCurrentNode());
+                while (parent != null) {
+                    this.breadList.push({ name: parent.data.name, id: parent.data.id })
+                    parent = this.$refs.tree.getNode(parent.parent.data.id)
+                }
+                var name = ''
+                for (var key in this.options) {
+                    if (this.options[key].id == this.chooseMenu) {
+                        name = this.options[key].name
+                        if (row.id <= 0) {
+                            row.name = name
+                        }
+                    }
+                }
+                //this.breadList.push({ name: name, id: -1 })
+                this.breadList = this.breadList.reverse()
+                this.checkName = row.name
+                this.initSort();
+            },
+            //【刷新系统树】
+            refreshMenu() {
+                if (this.chooseMenu > 0) {
+                    this.getMenus(true);
+                }
+                else {
+                    this.$message({
+                        type: 'warning',
+                        message: '当前没有可刷新的菜单哦！',
+                    });
+                }
+            },
+            //【菜单树点击事件】
+            handleNodeClick(data) {
+                //this.activeNames = ['1', '2']//展开2个折叠面板
+                this.breadList = [];
+                this.rightLoading = true;
+                // var currTree = this.$refs.tree.getNode(this.$refs.tree.getCurrentNode());
+                var parent = this.$refs.tree.getNode(this.$refs.tree.getCurrentNode());
+                while (parent != null) {
+                    this.breadList.push({ name: parent.data.name, id: parent.data.id });
+                    parent = this.$refs.tree.getNode(parent.parent.data.id);
+
+                }
+                var name = ''
+                for (var key in this.options) {
+                    if (this.options[key].id == this.chooseMenu) {
+                        name = this.options[key].name
+                    }
+                }
+                //this.breadList.push({ name: name, id: -1 })
+                this.breadList = this.breadList.reverse()
+                if (data.id > 0) {
+                    this.checkName = data.name
+                    this.getMenuDetail(data.id);
+                } else {
+                    this.checkName = this.systemName
+                    this.getMenuDetail(1);
+                }
+
+                this.initSort();
+            },
+            //【列表删除】
+            removeTable(index, row) {
+                this.listLoading = true;
+                var _self = this;
+                var arr = new Array();
+                $.ajax({
+                    type: 'get',
+                    dataType: 'json',
+                    url: '/rest/bmsmenu/delete?menuId=' + row.id,
+                    //data: { menuId: row.id },
+                    success: function (data) {
+                        if (data.success) {
+                            _self.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                            if (_self.chooseMenu > 0) {
+                                _self.getMenus(false);
+                                _self.getMenuDetail(row.parentId);
+                            } else {
+                                _self.getParentMenus();
+                            }
+                            //this.setSortListMaxHeight();
+                        }
+                        else {
+                            _self.$message({
+                                type: 'error',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            //【编辑界面删除】
+            removeMenu(menuId) {
+                var _self = this;
+                $.ajax({
+                    type: 'get',
+                    dataType: 'json',
+                    url: '/rest/bmsmenu/delete?menuId=' + menuId,
+                    success: function (data) {
+                        if (data.success) {
+                            _self.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                            _self.currMenu.id = 0;
+                            _self.chooseMenu = void 0;
+                            _self.getLeftMenus();
+                            _self.checkName = "请添加/选择菜单";
+                            //_self.positionTree({ id: 0, name: '全部菜单' });
+                            _self.currMenuVisible = false;
+                            _self.deleteVisible = false;
+                        }
+                        else {
+                            _self.$message({
+                                type: 'error',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            // 【关闭编辑】
+            closeEdit(done) {
+                this.$confirm('确认关闭？不提交编辑的内容吗？')
+                    .then(_ => {
+                        done();
+                        this.resetForm('editForm');
+                    })
+                    .catch(_ => { });
+            },
+            // 【关闭新增子集】
+            closeAddPart(done) {
+                this.$confirm('确认关闭？不提交编辑的内容吗？')
+                    .then(_ => {
+                        done();
+                        this.resetForm('addPartForm');
+                    })
+                    .catch(_ => { });
+            },
+            //【重置对应表单】
+            resetForm(formName) {
+                this.$refs[formName].resetFields();
+            },
+            //【编辑表单提交】
+            editSubmit() {
+                var _self = this;
+                if (_self.editForm.type == 0) {
+                    _self.editForm.parentId = 0
+                }
+                _self.$refs.editForm.validate((valid) => {
+                    if (valid) {
+                        if (_self.editForm.id > 0) {
+                            _self.currMenuVisible = true;
+                            _self.detailLoading = true;
+                            $.ajax({
+                                type: 'POST',
+                                dataType: 'json',
+                                contentType: 'application/json',
+                                url: '/rest/bmsmenu/modify',
+                                data: JSON.stringify(_self.editForm),
+                                success: function (data) {
+                                    _self.editLoading = false;
+                                    if (data.success) {
+                                        _self.$message({
+                                            type: 'success',
+                                            message: '编辑成功!'
+                                        });
+                                        _self.currMenu = data.data;
+                                        if (_self.currMenu.type == 0) {
+                                            _self.getParentMenus();
+                                        }
+                                        _self.currMenuVisible = false;
+                                         if (_self.chooseMenu > 0)
+                                            _self.getMenus(false);
+                                         _self.$nextTick(() => {
+                                            _self.setCurrMenu(_self.editForm.id, _self.editForm.name)//更新右侧内容
+                                        });
+                                    }
+                                    else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: data.msg
+                                        });
+                                    }
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    _self.editLoading = true;
+                                    if (errorThrown == "Unauthorized") {
+                                        window.parent.MainIndex.openLoginFrom();
+                                        _self.$message({
+                                            type: 'error',
+                                            message: XMLHttpRequest.responseJSON.msg
+                                        });
+                                    } else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: errorThrown
+                                        });
+                                    }
+                                },
+                                complete() {
+                                    setTimeout(() => {
+                                        _self.detailLoading = false;
+                                    }, 500)
+                                }
+                            });
+                        }
+                    }
+                })
+            },
+            //【新增子集】
+            addPartSubmit() {
+                var _self = this;
+                if (_self.addPartForm.type != 0) {
+                    _self.addPartForm.parentId = _self.currMenu.id
+                }
+                _self.$refs.addPartForm.validate((valid) => {
+                    if (valid) {
+                        _self.editLoading = true;
+                        _self.childrenLoading = true;
+                        //新增
+                        if (_self.addPartForm.id == 0) {
+                            $.ajax({
+                                type: 'POST',
+                                dataType: 'json',
+                                contentType: 'application/json',
+                                url: '/rest/bmsmenu/create',
+                                data: JSON.stringify(_self.addPartForm),
+                                success: function (data) {
+                                    _self.editLoading = false;
+                                    if (data.success) {
+                                        _self.$message({
+                                            type: 'success',
+                                            message: '新增成功!'
+                                        });
+                                        _self.getMenus(false);
+                                        _self.addPartFormVisible = false;
+                                        _self.resetForm('addPartForm');
+                                        //_self.setSortListMaxHeight();
+                                    }
+                                    else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: data.msg
+                                        });
+                                    }
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    _self.editLoading = true;
+                                    if (errorThrown == "Unauthorized") {
+                                        window.parent.MainIndex.openLoginFrom();
+                                        _self.$message({
+                                            type: 'error',
+                                            message: XMLHttpRequest.responseJSON.msg
+                                        });
+                                    } else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: errorThrown
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                })
+            },
+            //【保存排序】
+            saveSort() {
+                var _self = this;
+                var data = [];
+                for (var key in _self.childData) {
+                    data.push({ id: _self.childData[key].id, seqNo: _self.childData[key].seqNo })
+                }
+                if (_self.childData.length > 0) {
+                    $.ajax({
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/bmsmenu/save/seqno',
+                        data: JSON.stringify(data),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.endSort();
+                                if (_self.chooseMenu > 0)
+                                    _self.getMenus(false);
+                                //else {
+                                //    _self.getParentMenus();
+                                //}
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                }
+            },
+            //【获取菜单详细信息】
+            getMenuDetail(id) {
+                var _self = this;
+                _self.chooseMenu = id;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/bmsmenu/detail?id=' + id,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.currMenu = data.data;
+                            _self.childData = data.data.children;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    },
+                    complete: function () {
+                        setTimeout(() => {
+                            _self.rightLoading = false;
+                            _self.childrenLoading = false;
+                        }, 500)
+                    }
+                });
+            },
+            //【获取指定系统菜单列表】
+            getMenus(isRefresh) {
+                var _self = this;
+                var list = new Array({ "id": 0, "name": "全部菜单", "path": "", "type": 1, "seqNo": 1, "parentId": 0, "children": [] });
+                _self.menulist = list;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/bmsmenu/tree',
+                    success: function (data) {
+                        if (data.success == true) {
+                            var list = new Array({ "id": 0, "name": "全部菜单", "path": "", "type": 1, "seqNo": 1, "parentId": 0, "children": data.data });
+                            _self.menulist = list;
+                            if (isRefresh) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '刷新成功！',
+                                });
+                            }
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+
+                        if (_self.currMenu.id > 0 && _self.currMenu.id != _self.chooseMenu && _self.chooseMenu > -1) {//全部菜单高亮显示
+                            setTimeout(function () {
+                                _self.$refs.tree.setCurrentKey(_self.currMenu.id);
+
+                            }, 1000)
+                            _self.getMenuDetail(_self.currMenu.id)
+                        } else if (_self.chooseMenu > -1) {
+                            setTimeout(function () {
+                                _self.$refs.tree.setCurrentKey(0);
+                            }, 1000)
+                            _self.childData = _self.menulist[0].children
+                            //for (var key in _self.options) {
+                            //    if (_self.options[key].id == _self.chooseMenu) {
+                            //        _self.currMenu = _self.options[key]
+                            //    }
+                            //}
+                            _self.getMenuDetail(_self.chooseMenu)
+                        }
+
+
+
+
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            getLeftMenus() {
+                var _self = this;
+                var list = new Array({ "id": 0, "name": "全部菜单", "path": "", "type": 1, "seqNo": 1, "parentId": 0, "children": [] });
+                _self.menulist = list;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/bmsmenu/tree',
+                    success: function (data) {
+                        if (data.success == true) {
+                            var list = new Array({ "id": 0, "name": "全部菜单", "path": "", "type": 1, "seqNo": 1, "parentId": 0, "children": data.data });
+                            _self.menulist = list;
+                            //_self.tableClick(0)
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+        }
+    }
+    var Ctor = Vue.extend(Main)
+    new Ctor().$mount('#menu')
+</script>
+
+

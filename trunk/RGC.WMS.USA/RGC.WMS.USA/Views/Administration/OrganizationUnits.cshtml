@@ -1,0 +1,1907 @@
+﻿
+@{
+    ViewData["Title"] = "OrganizationUnits";
+}
+
+
+@section Styles{
+    <link href="/view-resources/Views/Administration/organization.css" rel="stylesheet" />
+}
+<div id="deparment" class="p15 bac01 h100b bsb">
+    <el-card class="el-card--plr h100b">
+        <el-row class=" h100b">
+            <!-- 左侧菜单树 -->
+            <el-col :span="6" class="h100b">
+                <div class="pt20 h100b bsb">
+                    <el-form class="form--mean" @@submit.native.prevent>
+                        <el-form-item class="mb0">
+                            <el-input placeholder="搜索"
+                                      prefix-icon="el-icon-search"
+                                      size="mini"
+                                      v-model="leftMenuFilterText">
+                            </el-input>
+                        </el-form-item>
+                    </el-form>
+                    <el-button type="primary" class="w100b mt10 tl pl40" v-on:click="setCurrMenu(0)">RGC<i class="el-icon-refresh fr" v-on:click.stop="() => refreshMenu()"></i></el-button>
+                    <el-tree :data="menulist"
+                             :props="leftMenuProps"
+                             node-key="id"
+                             ref="leftTree"
+                             getCurrentNode=""
+                             :highlight-current="true"
+                             v-on:node-click="leftMenuClick"
+                             :filter-node-method="leftMenuFilterNode"
+                             class="depart-tree mt10"
+                             default-expand-all
+                             :expand-on-click-node="false">
+                        <p slot-scope="{ node, data }">
+                            {{node.label}}
+                        </p>
+                    </el-tree>
+                </div>
+            </el-col>
+            <!-- 分割线 -->
+            <el-col :span="1" class="h100b">
+                <el-divider direction="vertical" class="h100b"></el-divider>
+            </el-col>
+            <!-- 右侧内容 -->
+            <el-col :span="17" class="pt25 h100b" v-loading="detailLoading">
+                @*有选中菜单*@
+                <div>
+                    @*标题*@
+                    <p>
+                        <span class="fs22">{{checkName}}</span>
+                        <el-button size="mini" class="vb ml10" v-if="currDepartId>0" v-on:click="openEditDepart">编辑</el-button>
+                    </p>
+                    @*路径*@
+                    <p class="mt15">
+                        <el-breadcrumb separator-class="el-icon-arrow-right">
+                            <el-breadcrumb-item v-for="(item,index) in breadList" :key="index">
+                                <el-button type="text" :disabled="index >= breadList.length-1" v-on:click="setCurrMenu(item.id)">{{item.name}}</el-button>
+                            </el-breadcrumb-item>
+                        </el-breadcrumb>
+                    </p>
+                </div>
+                @*内容 折叠面板 列表*@
+                <el-collapse v-model="activeNames" class="collapse--simple" v-on:change="handleChange">
+                    @*下级组织*@
+                    <el-collapse-item ref="collapseDepart" name="1" v-loading="childrenLoading">
+                        <template slot="title">
+                            <p class="fs20 c01">
+                                <i class="iconfont icon_depart fs20"></i>
+                                <span class="fs22">下级组织</span>
+                            </p>
+                        </template>
+                        <p class="bac02 pl10 ptb5 mt5">
+                            <el-button type="primary" :disabled="isSortDepart" size="mini" v-on:click="openAddDepartForm">添加子组织</el-button>
+                            @*<el-button size="mini" :disabled="departList.length==0||isSortDepart" v-on:click="startSortDepart">调整排序</el-button>*@
+                        </p>
+                        @*保存取消 拖拽*@
+                        <el-collapse-transition>
+                            <p class="tc bac03 lh30 fs14" v-show="sortDepartSaveShow">
+                                上下移动调整位置
+                                <el-button class="ml10" type="text" v-on:click="saveSortDepart">保存</el-button>
+                                <el-button type="text" v-on:click="endSortDepart">取消</el-button>
+                            </p>
+                        </el-collapse-transition>
+                        @*无数据*@
+                        <p class="tc lh30 fs14" v-if="departList.length==0">
+                            <span class="c02">当前组织不包含下级组织</span>
+                            <el-button class="ml10" type="text" v-on:click="openAddDepartForm">添加子组织</el-button>
+                        </p>
+                        @*有数据*@
+                        <el-table :data="departList.slice(0,showDepartNum)"
+                                  ref="departTable"
+                                  @*:key="tableKey"*@
+                                  v-if="departList.length>0"
+                                  @*:max-height="departMaxHeight"*@
+                                  class="table--sort table-depart w100b"
+                                  highlight-current-row
+                                  row-key="id"
+                                  size="mini">
+                            <el-table-column width="25" class="fs12">
+                                <template scope="scope">
+                                    <i class="iconfont icon_rank" v-show="isSortDepart" :class="{cursor:isSortDepart}"></i>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="name">
+                                <template scope="scope">
+                                    <el-link v-on:click="!isSortDepart&&setCurrMenu(scope.row.id)" :underline="false" class="db" :class="{cursor:isSortDepart}">{{scope.row.name}}<i class="el-icon-arrow-right fr mt5"></i></el-link>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        @*查看全部*@
+                        <el-button v-if="departList.length>defShowDepartNum&&showDepartNum!=departList.length&&!isSortDepart" class="ml25" type="text" v-on:click="expandAllDepart">查看全部 <i class="el-icon-arrow-down"></i></el-button>
+                        <el-button v-if="departList.length>defShowDepartNum&&showDepartNum==departList.length&&!isSortDepart" class="ml25" type="text" v-on:click="expandPartDepart">折叠 <i class="el-icon-arrow-up"></i></el-button>
+                    </el-collapse-item>
+                    @*组织人员*@
+                    <el-collapse-item v-if="currDepartId>0" ref="collapseStaff" name="2" v-loading="staffLoading">
+                        <template slot="title">
+                            <p class="fs20 c01">
+                                <i class="iconfont icon_staff fs24"></i>
+                                <span class="fs22">组织成员</span>
+                            </p>
+                        </template>
+                        <p class="bac02 pl10 ptb5 mt5">
+                            <el-button type="primary" :disabled="isSortStaff" size="mini" v-on:click="openStaffDialog">添加成员</el-button>
+                            @*<el-button size="mini" :disabled="staffList.length==0||isSortStaff" v-on:click="startSortStaff">调整排序</el-button>*@
+                        </p>
+                        @*保存取消 拖拽*@
+                        <el-collapse-transition>
+                            <p class="tc bac03 lh30 fs14" v-show="sortStaffSaveShow">
+                                上下移动调整位置
+                                <el-button class="ml10" type="text" v-on:click="saveSortStaff">保存</el-button>
+                                <el-button type="text" v-on:click="endSortStaff">取消</el-button>
+                            </p>
+                        </el-collapse-transition>
+                        @*无数据*@
+                        <p class="tc lh30 fs14" v-if="staffList.length==0">
+                            <span class="c02">当前组织暂无成员</span>
+                            <el-button class="ml10" type="text" v-on:click="openStaffDialog">添加成员</el-button>
+                        </p>
+                        @*有数据*@
+                        <el-table :data="staffList.slice(0,showStaffNum)"
+                                  v-if="staffList.length>0"
+                                  @*:max-height="staffMaxHeight"*@
+                                  class="table--sort table-staff w100b"
+                                  highlight-current-row
+                                  row-key="id"
+                                  :row-class-name="isSortStaff&&'cursor'"
+                                  size="mini">
+                            <el-table-column width="25" class="fs12">
+                                <template scope="scope">
+                                    <i class="iconfont icon_rank" v-show="isSortStaff" :class="{cursor:isSortStaff}"></i>
+                                </template>
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="fullName" label="姓名">
+                                <template scope="scope">
+                                    {{scope.row.fullName}}
+                                    @*<el-tag v-if="scope.row.isManager" class="tag--yellow" type="warning" size="mini" effect="dark">主管</el-tag>*@
+                                </template>
+                            </el-table-column>
+                            <el-table-column min-width="100" prop="loginName" label="登录名"></el-table-column>
+                            <el-table-column min-width="100" prop="role" label="角色"></el-table-column>
+                            <el-table-column min-width="100" prop="creationTime" label="添加时间"></el-table-column>
+                            <el-table-column label="操作" width="100">
+                                <template scope="scope">
+                                    <el-button size="mini" type="warning" v-on:click="getOrgUserMenuTree(scope.row.id)" plain>编辑权限</el-button>
+                                    <el-popover placement="top"
+                                                v-model="scope.row.visible">
+                                        <p class="mt5 mb10">确定删除该人员吗？</p>
+                                        <div style="text-align: right; margin: 0">
+                                            <el-button size="mini" type="text" v-on:click="scope.row.visible = false">取消</el-button>
+                                            <el-button type="warning" size="mini" v-on:click="deleteStaff(scope.$index,scope.row)">确定</el-button>
+                                        </div>
+                                        <el-button slot="reference" size="mini" type="danger" plain :disabled="isSortStaff">删除</el-button>
+                                    </el-popover>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        @*查看全部*@
+                        <el-button v-if="staffList.length>defShowStaffNum&&showStaffNum!=staffList.length&&!isSortStaff" class="ml25" type="text" v-on:click="expandAllStaff">查看全部 <i class="el-icon-arrow-down"></i></el-button>
+                        <el-button v-if="staffList.length>defShowStaffNum&&showStaffNum==staffList.length&&!isSortStaff" class="ml25" type="text" v-on:click="expandPartStaff">折叠 <i class="el-icon-arrow-up"></i></el-button>
+                    </el-collapse-item>
+                </el-collapse>
+            </el-col>
+        </el-row>
+    </el-card>
+    <!--编辑界面-->
+    <el-drawer :visible.sync="editDepart.visible"
+               direction="rtl"
+               size="40%"
+               :show-close="false"
+               :before-close="closeEditDepart"
+               ref="editDepart"
+               :wrapper-closable="true"
+               custom-class="right-drawer">
+        <span slot="title">
+            <span>编辑</span>
+            <i class="el-icon-close fr" @@click="editDepart.visible=false"></i>
+        </span>
+        <div class="right-drawer__content">
+            @*editPageForm*@
+            <el-form :model="editDepart.form" label-width="120px" size="mini" :rules="rulesEditDepartForm" ref="editDepartForm">
+                <el-form-item label="组织名称" prop="name">
+                    <el-input v-model="editDepart.form.name" auto-complete="off"></el-input>
+                </el-form-item>
+                @*<el-form-item label="上级组织" prop="parentName">
+                        <el-select v-model="editDepart.form.parentName" ref="departSelect" popper-class="edit__parent-select"
+                                   placeholder="请选择" @@visible-change="openParentDialog">
+                        </el-select>
+                    </el-form-item>*@
+                <el-form-item label="" prop="">
+                    <el-button size="mini" v-on:click="getOrgMenuTree(editDepart.form.id)">编辑权限</el-button>
+                </el-form-item>
+                @*<el-form-item label="设置主管">
+                        <el-select v-model="editDepart.form.manageStaffIds" placeholder="请选择" multiple ref="staffSelect"
+                                   v-on:click.native="openChargeDialog" popper-class="edit__select--department" >
+                            <el-option v-for="item in editDepart.form.departmentStaffList"
+                                       :key="item.id"
+                                       :label="item.fullName"
+                                       :value="item.id">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>*@
+            </el-form>
+            <div class="drawer__footer--bottom">
+                <el-button size="mini" v-on:click="editDepart.visible=false">取消</el-button>
+                <el-popover placement="top"
+                            v-model="deleteVisible">
+                    <p class="mt5 mb10">确定删除该组织吗？</p>
+                    <div style="text-align: right; margin: 0">
+                        <el-button size="mini" type="text" v-on:click="deleteVisible = false">取消</el-button>
+                        <el-button type="warning" size="mini" v-on:click="deleteDepart(editDepart.form.id)">确定</el-button>
+                    </div>
+                    <el-button slot="reference" size="mini" type="danger" plain :disabled="isSortDepart">删除</el-button>
+                </el-popover>
+                @*<el-button size="mini" type="danger" :loading="editLoading" plain>删除</el-button>*@
+                <el-button size="mini" type="primary" v-on:click="editDepartSubmit" :loading="editDepart.submitLoading">保存</el-button>
+            </div>
+        </div>
+    </el-drawer>
+    <!-- 设置上级组织 -->
+    <el-dialog :visible.sync="parentDepartmentVisible" width="56%">
+        <div class="my-transfer">
+            <div class="my-transfer__left">
+                <span>选择：</span>
+                <div class="my-transfer__left--main">
+                    <el-input placeholder="输入关键字进行过滤" v-model="parentDepartmentFilterText" size="small">
+                    </el-input>
+                    <el-tree :data="editDepart.departTree"
+                             :props="leftMenuProps"
+                             node-key="id"
+                             show-checkbox
+                             @@check-change="selectDepart"
+                             check-strictly
+                             :filter-node-method="filterNode"
+                             ref="departTree"
+                             :highlight-current="true"
+                             class="edit-depart-tree my-transfer__tree">
+                    </el-tree>
+                </div>
+            </div>
+            <div class="my-transfer__right">
+                <span>已选择：</span>
+                <div class="my-transfer__right--main">
+                    <ul>
+                        <li v-if="editDepart.selectedParent">
+                            <span><i class="iconfont icon_catalog"></i>{{editDepart.selectedParent.name}}</span>
+                            <el-button icon="el-icon-circle-close" type="text"
+                                       @@click="removeParentSelected(editDepart.selectedParent.id)">
+                            </el-button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <span slot="footer" class="dialog-footer">
+            <!-- 操作按钮 -->
+            <div class="drawer__footer--bottom edit__dialog--btn">
+                <el-button size="mini" @@click="parentDepartmentVisible = false">取 消</el-button>
+                <el-button size="mini" type="primary" v-on:click="submitSelectParent">保 存</el-button>
+            </div>
+        </span>
+    </el-dialog>
+
+    <!--添加子组织-->
+    <el-drawer :visible.sync="addDepart.visible"
+               direction="rtl"
+               size="40%"
+               :before-close="closeAddDepart"
+               :wrapper-closable="true"
+               :show-close="false"
+               ref="addDepart"
+               custom-class="right-drawer">
+        <span slot="title">
+            <span>添加组织</span>
+            <i class="el-icon-close fr" @@click="addDepart.visible=false;resetForm('addDepartForm');"></i>
+        </span>
+        <div class="right-drawer__content">
+            @*addDepartForm*@
+            <el-form :model="addDepart.form" label-width="120px" size="mini" :rules="rulesAddDepartForm" ref="addDepartForm" style="flex:1">
+                <el-form-item label="组织名称" prop="name">
+                    <el-input v-model="addDepart.form.name" auto-complete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="上级组织">
+                    {{checkName}}
+                </el-form-item>
+            </el-form>
+            <div class="drawer__footer--bottom">
+                <el-button size="mini" v-on:click="addDepart.visible=false;resetForm('addDepartForm');">取消</el-button>
+                <el-button size="mini" type="primary" v-on:click="addDepartSubmit" :loading="addDepart.submitLoading">保存</el-button>
+            </div>
+        </div>
+    </el-drawer>
+
+    <!--// 编辑组织架构权限的弹出框-->
+    <el-dialog :title="dialogOrganizationMenuTree.title"
+               :visible.sync="dialogOrganizationMenuTree.isShow"
+               size="tiny">
+        <el-tree :data="dialogOrganizationMenuTree.menuTree"
+                 :props="defaultPropsOrgMenu"
+                 :default-checked-keys="dialogOrganizationMenuTree.checkMenu"
+                 ref="orgMenuTree"
+                 show-checkbox
+                 check-strictly
+                 node-key="id"
+                 default-expand-all>
+        </el-tree>
+        <span slot="footer" class="dialog-footer">
+            <el-button size="small" v-on:click="dialogOrganizationMenuTree.isShow = false">取 消</el-button>
+            <el-button size="small" type="primary" v-on:click="modifyOrgMenuTree">保 存</el-button>
+        </span>
+    </el-dialog>
+
+    <!--// 编辑组织架构用户权限的弹出框-->
+    <el-dialog :title="dialogOrganizationUserMenuTree.title"
+               :visible.sync="dialogOrganizationUserMenuTree.isShow"
+               size="tiny">
+        <el-tree :data="dialogOrganizationUserMenuTree.menuTree"
+                 :props="defaultPropsOrgMenu"
+                 :default-checked-keys="dialogOrganizationUserMenuTree.checkMenu"
+                 ref="orgUserMenuTree"
+                 show-checkbox
+                 check-strictly
+                 node-key="id"
+                 default-expand-all
+                 :render-content="renderOrgUserMenuContent">
+        </el-tree>
+        <span slot="footer" class="dialog-footer">
+            <el-button size="small" v-on:click="dialogOrganizationUserMenuTree.isShow = false">取 消</el-button>
+            <el-button size="small" type="primary" v-on:click="modifyUserOrgMenuTree">保 存</el-button>
+        </span>
+    </el-dialog>
+    <!-- 添加成员 -->
+    <el-dialog title="添加成员" :visible.sync="staffDialog.visible" ref="staffDialog" custom-class="edit__dialog dialog--footcenter">
+        <div class="my-transfer">
+            <div class="my-transfer__left">
+                <p>选择:</p>
+                <div class="my-transfer__left--main my-transfer-checklist">
+                    <el-input placeholder="搜索" v-model="staffFilterText" prefix-icon="el-icon-search" size="small"></el-input>
+                    <el-checkbox v-if="otherStaffListFilter.length>0" :indeterminate="staffDialog.isInd" v-model="staffDialog.checkAll" v-on:change="handleCheckAllStaff">全选</el-checkbox>
+                    <el-checkbox-group v-model="staffDialog.checkedStaff" v-on:change="handleCheckedStaff">
+                        <el-checkbox v-for="staff in otherStaffListFilter" :label="staff" :key="staff.id">{{staff.loginName}}<span v-if="staff.departmentName!=null&&staff.departmentName!=''" class="fs12 c02 ml5">（{{staff.departmentName}}）</span></el-checkbox>
+                    </el-checkbox-group>
+                </div>
+            </div>
+            <div class="my-transfer__right">
+                <p>已选择:</p>
+                <div class="my-transfer__right--main">
+                    <ul>
+                        <li v-for="staff in staffDialog.checkedStaff">
+                            <span>{{staff.loginName}}</span>
+                            <el-button type="text" icon="el-icon-circle-close" v-on:click="deleteCheckedStaff(staff.id)"></el-button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <span slot="footer" class="dialog-footer dialog-footer--noborder">
+            <!-- 操作按钮 -->
+            <el-button size="mini" v-on:click="staffDialog.visible=false">取 消</el-button>
+            <el-button size="mini" type="primary" v-on:click="saveCheckedStaff">保 存</el-button>
+        </span>
+    </el-dialog>
+</div>
+
+<script>
+    var Main = {
+        data() {
+            return {
+                detailLoading: false,//右侧全部loading
+                childrenLoading: false,//下级组织loading
+                staffLoading: false,//组织人员loading
+                allDepartmentData: [],//平级组织数据
+                //==左侧菜单==
+                leftMenuFilterText: '',//搜索值
+                //对应属性
+                leftMenuProps: {
+                    children: 'children',
+                    label: 'name',
+                    path: 'path',
+                    type: 'type'
+                },
+                //菜单列表
+                menulist: [],
+                //当前菜单
+                currMenu: {
+                    id: 0,
+                    name: '',
+                    authorizeCode: '',
+                    seqNo: 0,
+                    path: '',
+                    type: 2,
+                    parentId: 0,
+                    isDeleted: false,
+                    icoName: '',
+                    isShow: true,
+                    remark: '',
+                },
+                currDepartId: 0,//当前选中菜单Id
+                breadList: [{ id: '0', name: 'RGC' }],//面包屑
+                checkName: 'RGC',//当前选中名称
+
+
+                //==右侧内容==
+                activeNames: ['1', '2'],//折叠面板 选中值
+                sortDepartFuc: void 0,//排序
+                sortStaffFuc: void 0,//排序
+                // 分页
+                total: 30,
+                page: 1,
+                currentPage: 1,
+                pageSize: 5,
+
+                //下级组织列表
+                //tableKey: 'departTable',
+                defShowDepartNum: 5,//默认显示
+                showDepartNum: 5,//实际显示
+                departList: [],
+                //员工列表
+                staffList: [],
+                defShowStaffNum: 5,//折叠后 默认展示数量
+                showStaffNum: 5,//实际展示数量
+                //编辑组织 抽屉
+                editDepart: {
+                    visible: false,//可见
+                    currNodekey: 0,//上级组织默认选中
+                    selectedParent: null,//已选中的上级组织
+                    departTree: [{
+                        id: 0,
+                        name: "RGC",
+                        type: 1,
+                        children: []
+                    }],
+                    form: {
+                        id: '',
+                        name: '',
+                        parentId: null,
+                        parentName: '',
+                    },
+                    departmentIds_show: [],//组织选择框展示数据
+                    submitLoading: false,//提交按钮 加载中
+                },
+                rulesEditDepartForm: {
+                    name: [
+                        { required: true, message: '请输入组织名称', trigger: 'blur' },
+                    ],
+                    parentName: [
+                        { required: true, message: '请选择上级组织', trigger: 'blur' },
+                    ]
+                },
+                parentDepartmentVisible: false,//上级组织选择框
+                parentDepartmentFilterText: '',
+                chargeDialog: {//设置主管 弹出框
+                    visible: false,
+                    checkAll: false,
+                    checkedCharge: [],
+                    isInd: false//未全选标识
+                },
+                otherChargeListFilter: [],//筛选后的主管列表
+                chargeFilterText: '',//设置主管 搜索内容
+                //新增组织 抽屉
+                addDepart: {
+                    visible: false,//可见
+                    form: {
+                        name: '',
+                    },
+                    submitLoading: false,//提交按钮 加载中
+                },
+                rulesAddDepartForm: {
+                    name: [
+                        { required: true, message: '请输入组织名称', trigger: 'blur' },
+                    ]
+                },
+                //新增员工 弹出选择框
+                staffDialog: {
+                    visible: false,
+                    checkAll: false,
+                    checkedStaff: [],
+                    isInd: false//未全选标识
+                },
+                otherStaffList: [],//员工列表
+                otherStaffListFilter: [],//筛选后的员工列表
+                staffFilterText: '',//搜索内容
+                //新增员工 抽屉
+                //addStaff: {
+                //    visible: false,//可见
+                //    list: [],//员工列表
+                //    result: [],//搜索后的结果
+                //    checkedList:[],//选中的员工
+                //    listLoading: false,//列表 加载中
+                //    submitLoading: false,//提交按钮 加载中
+                //},
+                //addchargeFilterText:'',//新增员工 搜索值
+
+                deleteVisible: false,//确认删除
+
+
+                //==排序==
+                departMaxHeight: '1000',
+                staffMaxHeight: '1000',
+
+                isSortDepart: false,//是否启用组织排序
+                isSortStaff: false,//是否启用员工排序
+
+                sortDepartSaveShow: false,//保存拖拽 行 显示隐藏
+                sortStaffSaveShow: false,//保存拖拽 行 显示隐藏
+
+                dialogOrganizationMenuTree: {
+                    title: "",
+                    isShow: false,
+                    orgId: 0,
+                    checkMenu: [],
+                    menuTree: []
+                },
+                dialogOrganizationUserMenuTree: {
+                    title: "",
+                    isShow: false,
+                    userId: 0,
+                    checkMenu: [],
+                    menuTree: []
+                },
+                defaultPropsOrgMenu: {
+                    children: 'children',
+                    label: 'name'
+                }, //定义树的属性对应的字段
+            };
+        },
+        created() {
+            this.getLeftMenus(0, false);
+            //this.getRightList(0);
+        },
+        mounted() {
+            var _self = this;
+        },
+        watch: {
+            //左侧菜单 搜索框
+            leftMenuFilterText(val) {
+                this.$refs.leftTree.filter(val);
+            },
+
+            //添加成员 搜索框
+            //addchargeFilterText(val) {
+            //    let query = val.trim();
+            //    this.addStaff.result = this.addStaff.list.filter(item => {
+            //        if (item.fullName.indexOf(query) >= 0) {
+            //            return item
+            //        }
+            //    })
+            //},
+            //设置主管 搜索框
+            chargeFilterText(val) {
+                let query = val.trim();
+                this.otherChargeListFilter = this.editDepart.form.departmentStaffList.filter(item => {
+                    if (item.fullName.indexOf(query) >= 0) {
+                        return item
+                    }
+                })
+            },
+            //新增用户 搜索框
+            staffFilterText(val) {
+                let query = val.trim();
+                this.otherStaffListFilter = this.otherStaffList.filter(item => {
+                    if (item.fullName.indexOf(query) >= 0) {
+                        return item
+                    }
+                })
+
+            },
+            //选择上级组织搜索框
+            parentDepartmentFilterText(val) {
+                this.$refs.departTree.filter(val);
+            }
+        },
+        methods: {
+            //===整体 start=====================================
+            //【左侧菜单搜索】
+            leftMenuFilterNode(value, data) {
+                if (!value) return true;
+                return data.name.indexOf(value) !== -1;
+            },
+            //【刷新系统树】
+            refreshMenu() {
+                this.getLeftMenus(0, true);
+            },
+            //【获取左侧菜单树】
+            getLeftMenus(parentId, isRefresh) {
+                var _self = this;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    url: '/rest/organization/tree',
+                    async:false,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.menulist = data.data;
+                            _self.$nextTick(() => {
+                                _self.$refs.leftTree.setCurrentKey(_self.currDepartId);//选中左侧菜单
+                            });
+                            if (isRefresh) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '刷新成功！',
+                                });
+                            }
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+                //this.getRightList(0);获取右侧内容
+            },
+            //【点击菜单】
+            leftMenuClick(data) {
+                this.detailLoading = true;
+                //关闭排序
+                this.isSortDepart = false;
+                this.sortDepartSaveShow = false;
+                this.isSortStaff = false;
+                this.sortStaffSaveShow = false;
+                //右侧数据
+                this.activeNames = ['1', '2']//展开2个折叠面板
+                this.breadList = [];//面包屑
+                //点击树节点
+                var currNode = this.$refs.leftTree.getNode(this.$refs.leftTree.getCurrentNode());//当前节点
+                console.log(currNode)
+                this.checkName = currNode.data.name;//标题
+                //面包屑 层级拼合
+                this.currDepartId = currNode.data.id;
+                while (currNode != null) {
+                    this.breadList.push({ name: currNode.data.name, id: currNode.data.id })
+                    currNode = this.$refs.leftTree.getNode(currNode.parent.data.id)
+                }
+                this.breadList.push({ id: '0', name: 'RGC' });//加上最高级 RGC
+                this.breadList = this.breadList.reverse();
+                //加载下级组织和员工列表
+                this.getRightList(data.id);
+            },
+            //【右侧组织列表点击 和 面包屑点击】
+            setCurrMenu(id) {
+                this.currDepartId = id;
+                //关闭排序
+                this.isSortDepart = false;
+                this.sortDepartSaveShow = false;
+                this.isSortStaff = false;
+                this.sortStaffSaveShow = false;
+                if (id != 0) {
+                    this.$refs.leftTree.setCurrentKey(id);//选中左侧菜单
+                    var data = { 'id': id };
+                    this.leftMenuClick(data);//模拟点击左侧菜单-》加载数据
+                }
+                else {//点击最高级 RGC
+                    this.$refs.leftTree.setCurrentKey(null);//取消高亮
+                    this.checkName = 'RGC';
+                    this.breadList = [{ id: '0', name: 'RGC' }];
+                    this.getRightList(0);
+                }
+
+            },
+            //【获取员工列表】
+            getUserList(id) {
+                var _self = this;
+                //获取员工列表
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    url: '/rest/organization/userList?orgId=' + id,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.staffList = data.data;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    },
+                    complete() {
+                        setTimeout(() => {
+                            _self.staffLoading = false;
+                            _self.detailLoading = false;
+                        }, 500)
+                    }
+                });
+            },
+            //【展开全部组织】
+            expandAllStaff() {
+                this.showStaffNum = this.staffList.length;
+            },
+            //【折叠】
+            expandPartStaff() {
+                this.showStaffNum = this.defShowStaffNum;
+            },
+            //【获取子组织列表】
+            getOrganizationList(id) {
+                var _self = this;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    url: '/rest/organization/children?orgId=' + id,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.departList = data.data;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    },
+                    complete() {
+                        setTimeout(() => {
+                            _self.childrenLoading = false;
+                        }, 500)
+                    }
+                });
+            },
+            //【展开全部组织】
+            expandAllDepart() {
+                this.showDepartNum = this.departList.length;
+            },
+            //【折叠】
+            expandPartDepart() {
+                this.showDepartNum = this.defShowDepartNum;
+            },
+            //【获取右侧内容】
+            getRightList(id) {
+                this.getOrganizationList(id);
+                //点击的不是最高级-RGC-》加载员工列表
+                if (id > 0) {
+                    this.getUserList(id);
+                }
+            },
+            //【删除员工】
+            deleteStaff(index, data) {
+                var _self = this;
+                $.ajax({
+                    type: 'get',
+                    dataType: 'json',
+                    url: '/rest/organization/remove/user?userId=' + data.id + '&orgId=' + _self.currDepartId,
+                    success: function (data) {
+                        if (data.success) {
+                            _self.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                            _self.staffList.splice(index, 1);
+                            _self.getLeftMenus(0, false);//更新左侧菜单
+                        }
+                        else {
+                            _self.$message({
+                                type: 'error',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+
+            },
+            //【折叠面板 状态改变 点击】
+            handleChange(val) {
+                //this.setSortListMaxHeight();
+            },
+            //===整体 end========================================
+
+            //===编辑组织 抽屉 start=============================
+            //【打开上级组织选择框】
+            openParentDialog(flag) {
+                var _self = this;
+                if (flag) {
+                    _self.parentDepartmentVisible = true;
+                    _self.$nextTick(() => {
+                        _self.$refs.departTree.setCheckedKeys([_self.editDepart.form.parentId]);
+                    })
+                }
+            },
+            //【选中组织树】
+            selectDepart(item, check) {
+                _self = this;
+                if (check) {
+                    _self.$refs.departTree.setCheckedNodes([
+                        item]); //执行这段会再次触发check-change，所以要在else中判断一下
+                    _self.editDepart.selectedParent = item;
+                } else {
+                    if (item.id == _self.editDepart.selectedParent.id) {
+                        _self.editDepart.selectedParent = null;
+                    }
+                }
+            },
+            //【删除选择】
+            removeParentSelected(id) {
+                _self = this;
+                _self.$refs.departTree.setChecked(id, false);
+            },
+            //【保存】
+            submitSelectParent() {
+                _self = this;
+                this.editDepart.form.parentName = this.editDepart.selectedParent ? this.editDepart.selectedParent.name : null;
+                this.editDepart.form.parentId = this.editDepart.selectedParent ? this.editDepart.selectedParent.id : null;
+                this.parentDepartmentVisible = false;
+                if (_self.editDepart.selectedParent) {
+                    console.log(_self.editDepart.form.parentName)
+                    _self.$refs.editDepartForm.clearValidate('parentName');//选择后清除表单验证提示
+                }
+                //_self.$nextTick(() => {
+                //    var departTree = _self.$refs.departTree;//组织树
+                //    departTree.setCurrentKey(parentId);//选中上级组织
+                //    parentName = departTree.getCurrentNode(parentId).name;//获取上级组织的名称
+                //    _self.$set(_self.editDepart.form,'parentName',parentName);
+                //    //_self.editDepart.form.parentName = parentName;下拉框显示名称
+                //})
+            },
+            //树查询过滤
+            filterNode(value, data) {
+                if (!value) return true;
+                return data.name.indexOf(value) !== -1;
+            },
+
+            //【打开选择主管弹窗】
+            openChargeDialog() {
+                var _self = this;
+                _self.chargeDialog.visible = true;
+                _self.$refs.staffSelect.handleClose();//关闭下拉
+                _self.chargeDialog.checkedCharge = [];//清空
+                _self.chargeDialog.checkAll = false;//全选标识
+                _self.chargeDialog.isInd = false;
+                _self.editDepart.form.manageStaffIds.some((manageId) => {
+                    _self.otherChargeListFilter.some((item) => {
+                        if (item.id == manageId) {
+                            _self.chargeDialog.checkedCharge.push(item);
+                            _self.chargeDialog.checkAll = true;
+                            _self.chargeDialog.isInd = true;
+                        }
+                    })
+                })
+                if (_self.otherChargeListFilter.length == _self.chargeDialog.checkedCharge.length) {
+                    _self.chargeDialog.isInd = false;
+                }
+            },
+            //【全选主管】
+            handleCheckAllCharge(val) {
+                var _self = this;
+                _self.chargeDialog.checkedCharge = [];
+                if (val) {
+                    _self.otherChargeListFilter.forEach((item) => {
+                        _self.chargeDialog.checkedCharge.push(item);
+                    })
+                    _self.chargeDialog.isInd = false;
+                }
+                else {
+                    _self.chargeDialog.checkedCharge = [];
+                }
+
+
+            },
+            //【选择主管】
+            handleCheckedCharge(value) {
+                let checkedCount = value.length;
+                this.chargeDialog.checkAll = checkedCount === this.otherChargeListFilter.length;
+                this.chargeDialog.isInd = checkedCount > 0 && checkedCount < this.otherChargeListFilter.length;
+            },
+            //【删除选择的主管】
+            deleteCheckedCharge(id) {
+                var _self = this;
+                _self.chargeDialog.checkedCharge.some((item, index) => {
+                    if (item.id == id) {
+                        _self.chargeDialog.checkedCharge.splice(index, 1);
+                        _self.chargeDialog.checkAll = false;
+                        _self.chargeDialog.isInd = true;
+                        return;
+                    }
+                })
+                _self.$nextTick(() => {
+                    console.log(_self.chargeDialog.checkedCharge.length)
+                    if (_self.chargeDialog.checkedCharge.length == 0) {
+                        _self.chargeDialog.checkAll = false;
+                        _self.chargeDialog.isInd = false;
+                    }
+                })
+            },
+            //【保存选择的主管】
+            saveCheckedCharge() {
+                this.editDepart.form.manageStaffIds = [];
+                var manageStaffIds = this.editDepart.form.manageStaffIds;
+                this.chargeDialog.checkedCharge.forEach((item) => {
+                    manageStaffIds.push(item.id);
+                });
+                this.chargeDialog.visible = false;
+            },
+            //【打开编辑抽屉】
+            openEditDepart() {
+                var _self = this;
+                _self.editDepart.visible = true;
+                //_self.editDepart.departTree[0].children = _self.menulist;绑定组织列表
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/organization/detail?orgId=' + _self.currDepartId,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.editDepart.form = data.data;
+                            _self.otherChargeListFilter = data.data.departmentStaffList;
+                            _self.editDepart.departTree[0].children = data.data.departmentTree;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+                //var parentId = _self.editDepart.form.parentId;
+                //var parentName = 'RGC';//默认选中RGC
+                //_self.$nextTick(() => {
+                //    var departTree = _self.$refs.departTree;//组织树
+                //    departTree.setCurrentKey(parentId);//选中上级组织
+                //    parentName = departTree.getCurrentNode(parentId).name;//获取上级组织的名称
+                //    _self.$set(_self.editDepart.form,'parentName',parentName);
+                //    //_self.editDepart.form.parentName = parentName;下拉框显示名称
+                //})
+
+            },
+            //【保存】
+            editDepartSubmit() {
+                var _self = this;
+                _self.$refs.editDepartForm.validate((valid) => {
+                    if (valid) {
+                        //编辑
+                        $.ajax({
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            url: '/rest/organization/modify',
+                            data: JSON.stringify(_self.editDepart.form),
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '编辑成功!'
+                                    });
+                                    _self.getLeftMenus(0, false);//更新左侧菜单
+                                    _self.$nextTick(() => {
+                                        _self.setCurrMenu(_self.editDepart.form.id);//更新右侧内容
+                                    });
+
+                                    _self.resetForm('editDepartForm');//清空
+                                    _self.editDepart.visible = false;//关闭抽屉
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }
+                })
+            },
+            //【删除】
+            deleteDepart(id) {
+                var _self = this;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    url: '/rest/organization/delete?organizationId=' + id,
+                    success: function (data) {
+                        if (data.success) {
+                            _self.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                            _self.currDepartId = _self.editDepart.form.parentId;//删除成功后，回到上一级菜单
+                            _self.getLeftMenus(0, false);//更新左侧菜单
+                            _self.setCurrMenu(_self.currDepartId);//更新右侧内容
+                            _self.resetForm('editDepartForm');//清空
+                            _self.editDepart.visible = false;//关闭抽屉
+                            _self.deleteVisible = false;//关闭确认删除框
+                        }
+                        else {
+                            _self.$message({
+                                type: 'error',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            // 【关闭】
+            closeEditDepart(done) {
+                this.$confirm('确认关闭？不提交编辑的内容吗？')
+                    .then(_ => {
+                        done();
+                        this.resetForm('editDepartForm');
+                    })
+                    .catch(_ => { });
+            },
+            //===编辑组织 抽屉 end===============================
+
+            //===新增子组织 抽屉 start===========================
+            //【打开抽屉】
+            openAddDepartForm() {
+                this.addDepart.visible = true;
+                this.addDepart.form.parentId = this.currDepartId;
+            },
+            //【保存】
+            addDepartSubmit() {
+                var _self = this;
+                _self.$refs.addDepartForm.validate((valid) => {
+                    if (valid) {
+                        _self.childrenLoading = true;
+                        //新增
+                        $.ajax({
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            url: '/rest/organization/create',
+                            data: JSON.stringify(_self.addDepart.form),
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '新增成功!'
+                                    });
+                                    _self.getOrganizationList(_self.currDepartId);//更新组织列表
+                                    _self.getLeftMenus(0, false);//更新左侧菜单
+                                    _self.resetForm('addDepartForm');//清空
+                                    _self.addDepart.visible = false;//关闭抽屉
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        // message: XMLHttpRequest.responseJSON.msg
+                                        message: XMLHttpRequest.statusText
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }
+                })
+            },
+            // 【关闭新增组织】
+            closeAddDepart(done) {
+                this.$confirm('确认关闭？不提交编辑的内容吗？')
+                    .then(_ => {
+                        done();
+                        this.resetForm('addDepartForm');
+                    })
+                    .catch(_ => { });
+            },
+            //===新增子组织 抽屉 end===============================
+
+
+            //===新增员工 弹出选择框 start=========================
+            //【打开选择人员弹窗】
+            openStaffDialog() {
+                var _self = this;
+                _self.staffDialog.visible = true;
+                _self.staffDialog.checkedStaff = [];
+                _self.staffDialog.checkAll = false;
+                _self.staffDialog.isInd = false;
+                _self.staffFilterText = "";
+                //获取没有加入该组织 员工列表
+                var _self = this;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/organization/otherUserList?orgId=' + this.currDepartId,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.otherStaffList = data.data;
+                            _self.otherStaffListFilter = data.data;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            //【全选人员】
+            handleCheckAllStaff(val) {
+                var _self = this;
+                _self.staffDialog.checkedStaff = [];
+                if (val) {
+                    _self.otherStaffListFilter.forEach((item) => {
+                        _self.staffDialog.checkedStaff.push(item);
+                    })
+                    _self.staffDialog.isInd = false;
+                }
+                else {
+                    _self.staffDialog.checkedStaff = [];
+                }
+
+
+            },
+            //【选择人员】
+            handleCheckedStaff(value) {
+                let checkedCount = value.length;
+                this.staffDialog.checkAll = checkedCount === this.otherStaffListFilter.length;
+                this.staffDialog.isInd = checkedCount > 0 && checkedCount < this.otherStaffListFilter.length;
+            },
+            //【删除选择的人员】
+            deleteCheckedStaff(id) {
+                var _self = this;
+                _self.staffDialog.checkedStaff.some((item, index) => {
+                    if (item.id == id) {
+                        _self.staffDialog.checkedStaff.splice(index, 1);
+                        _self.staffDialog.checkAll = false;
+                        this.staffDialog.isInd = true;
+                        return;
+                    }
+                })
+                _self.$nextTick(() => {
+                    if (_self.staffDialog.checkedStaff.length == 0) {
+                        _self.staffDialog.checkAll = false;
+                        _self.staffDialog.isInd = false;
+                    }
+                })
+            },
+            //【保存选择的人员】
+            saveCheckedStaff() {
+                var _self = this;
+                var checkedStaffIds = [];
+                this.staffDialog.checkedStaff.forEach((item) => {
+                    checkedStaffIds.push(item.id);
+                });
+                this.chargeDialog.visible = false;
+                var submitForm = { 'OrganizationId': _self.currDepartId, 'UserIds': checkedStaffIds };
+                _self.staffLoading = true;
+                $.ajax({
+                    type: 'POST',
+                    dataType: 'json',
+                    contentType: "application/json",
+                    async: false,
+                    url: '/rest/organization/add/user',
+                    data: JSON.stringify(submitForm),
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.$message({
+                                type: 'success',
+                                message: '新增成功!'
+                            });
+                            _self.getUserList(_self.currDepartId);//更新员工列表
+                            _self.getLeftMenus(0, false);//更新左侧菜单
+
+                            _self.staffDialog.visible = false;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+                this.editDepart.form.manageStaffIds = [];
+                var manageStaffIds = this.editDepart.form.manageStaffIds;
+                this.chargeDialog.checkedCharge.forEach((item) => {
+                    manageStaffIds.push(item.id);
+                });
+                this.chargeDialog.visible = false;
+            },
+            //===新增员工 弹出选择框 end============================
+
+            //===新增员工 抽屉 start================================
+            //【打开抽屉】
+            openAddStaff() {
+                this.addStaff.visible = true;
+                this.checkedList = [];//清空选择的员工列表
+                //获取没有加入该组织 员工列表
+                var _self = this;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/organization/otherUserList?orgId=' + this.currDepartId,
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.addStaff.list = data.data;
+                            _self.addStaff.result = data.data;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+
+                $('.js-addStaffTable .el-checkbox-button').removeClass('is-checked');//清空checkbox选中效果
+            },
+            //【员工列表选择操作】
+            checkStaff(checked, staffId) {
+                if (checked) {//选中
+                    this.checkedList.push(staffId);
+                }
+                else {//取消选中
+                    var index = this.checkedList.indexOf(staffId);
+                    this.checkedList.splice(index, 1);
+                }
+            },
+            //【保存】
+            addStaffSubmit() {
+                var _self = this;
+                var submitForm = { 'departmentId': _self.currDepartId, 'staffIds': _self.checkedList };
+                $.ajax({
+                    type: 'POST',
+                    dataType: 'json',
+                    contentType: "application/json",
+                    async: false,
+                    url: '/api/company/department/staff/create',
+                    data: JSON.stringify(submitForm),
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.$message({
+                                type: 'success',
+                                message: '新增成功!'
+                            });
+                            _self.getUserList(_self.currDepartId);//更新员工列表
+                            _self.getLeftMenus(0, false);//更新左侧菜单
+
+                            _self.addStaff.visible = false;
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            //【关闭新增人员】
+            closeAddStaff(done) {
+                this.$confirm('确认关闭？不提交编辑的内容吗？')
+                    .then(_ => {
+                        done();
+                        this.addStaffFilterText = null;
+                        this.resetForm('addStaffForm');
+                    })
+                    .catch(_ => { });
+            },
+            //===新增员工 抽屉 end=================================
+
+            //===下级组织 排序 start===============================
+            //【开始排序】
+            startSortDepart() {
+                this.isSortDepart = true;//标记正在排序中
+                //this.activeNames = ['1'];只展开排序的折叠面板
+                //this.setSortDepartMaxHeight();
+                this.expandAllDepart();//展开列表
+                this.sortDepartSaveShow = true;//显示 保存排序 行
+                const self = this;
+
+                const table = document.querySelector('.table-depart .el-table__body-wrapper tbody');
+                self.sortDepartFuc = Sortable.create(table, {
+                    onEnd({ newIndex, oldIndex }) {
+                        const targetRow = self.departList.splice(oldIndex, 1)[0]
+                        self.departList.splice(newIndex, 0, targetRow);
+                        for (var i = 0; i < self.departList.length; i++) {
+                            self.departList[i].seqNo = i + 1;
+                        }
+                    }
+                })
+            },
+            //【取消排序】
+            endSortDepart() {
+                this.isSortDepart = false;//隐藏 拖拽可排序 图标
+                this.sortDepartSaveShow = false;//关闭排序提示行
+                this.getOrganizationList(this.currDepartId);//刷新组织人员列表
+                this.expandPartDepart();//折叠列表
+                this.sortDepartFuc.destroy();//销毁
+            },
+            //【保存排序】
+            saveSortDepart() {
+                var _self = this;
+                var data = [];
+                for (var key in _self.departList) {
+                    data.push({ id: _self.departList[key].id, seqNo: _self.departList[key].seqNo })
+                }
+                if (_self.departList.length > 0) {
+                    $.ajax({
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/api/company/department/seqno/update',
+                        data: JSON.stringify(data),
+                        success: function (data) {
+                            if (data.success == true) {
+                                //_self.endSortDepart();
+                                _self.getLeftMenus(0, false);//更新左侧菜单
+                                _self.sortDepartSaveShow = false;//关闭排序提示行
+                                _self.expandPartDepart();//折叠列表
+                                _self.isSortDepart = false;//标记排序结束
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                                _self.endSortDepart();//结束排序
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                }
+            },
+            //===下级组织 排序 end=================================
+
+            //===员工 排序 start===================================
+            //【排序按钮】
+            startSortStaff() {
+                this.isSortStaff = true;//标记正在排序中
+                //this.activeNames = ['2'];只展开排序的折叠面板
+                //this.setSortDepartMaxHeight();
+                this.expandAllStaff();//展开全部列表
+                this.sortStaffSaveShow = true;
+                const self = this;
+
+                const table = document.querySelector('.table-staff .el-table__body-wrapper tbody');
+                self.sortStaffFuc = Sortable.create(table, {
+                    onEnd({ newIndex, oldIndex }) {
+                        const targetRow = self.staffList.splice(oldIndex, 1)[0]
+                        self.staffList.splice(newIndex, 0, targetRow);
+                        for (var i = 0; i < self.staffList.length; i++) {
+                            self.staffList[i].seqNo = i + 1;
+                        }
+                    }
+                })
+            },
+            //【取消排序】
+            endSortStaff() {
+                this.isSortStaff = false;//隐藏 拖拽可排序 图标
+                this.sortStaffSaveShow = false;//关闭排序提示行
+                this.expandPartStaff();//折叠列表
+                this.getUserList(this.currDepartId);//刷新列表
+                this.sortStaffFuc.destroy();//销毁
+            },
+            //【保存排序】
+            saveSortStaff() {
+                var _self = this;
+                var data = [];
+                for (var key in _self.staffList) {
+                    data.push({ id: _self.staffList[key].id, seqNo: _self.staffList[key].seqNo })
+                }
+                if (_self.staffList.length > 0) {
+                    $.ajax({
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/api/company/department/staff/seqno/update',
+                        data: JSON.stringify(data),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.expandPartStaff();//折叠列表
+                                _self.sortStaffSaveShow = false;//关闭排序提示行
+                                _self.isSortStaff = false;//标记排序结束
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                                _self.endSortStaff();
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                }
+            },
+            //===下级组织 排序 end=================================
+            //【重置对应表单】
+            resetForm(formName) {
+                this.$refs[formName].resetFields();
+            },
+            //【计算 排序表格的最大高度】
+            setSortListMaxHeight() {
+                var clientHeight = document.documentElement.clientHeight;//网页可见区域高度
+                var departTableHeight = 0;//下级组织列表高度
+                var staffTableHeight = 0;//组织人员列表高度
+
+                var departSortLineHeight = 0;//下级组织排序提示行高度
+                var staffSortLineHeight = 0;//组织人员排序提示行高度
+                if (this.isSortDepart) { departSortLineHeight = 40; }
+                if (this.isSortStaff) { staffSortLineHeight = 40; }
+
+                var departFooterHeight = 10;//下级组织查看全部 按钮高度
+                var staffFooterHeight = 10;//组织人员查看全部 按钮高度
+                if (this.departList.length > 3) { departFooterHeight = 40; }
+                if (this.staffList.length > 3) { staffFooterHeight = 40; }
+
+                var collapseHeight = 49;//折叠后面板高度
+
+                var titleHeight = 109;//标题 面包屑高度
+                var paddingHeight = 30;//外层padding高度
+                var stayHeight = paddingHeight + titleHeight;//固定高度
+
+                var departHeadHeight = 102;//下级组织头部高度
+                var staffHeadHeight = 138;//组织人员头部高度（有table标题）
+                //只有组织折叠面板
+                if (this.$refs.collapseStaff == undefined) {
+                    departTableHeight = clientHeight - stayHeight - departHeadHeight - departFooterHeight - departSortLineHeight;
+                }
+                else {//有2个折叠面板
+                    //只有一个展开
+                    if (this.activeNames.length == 1) {
+                        departTableHeight = clientHeight - stayHeight - departHeadHeight - departFooterHeight - departSortLineHeight - collapseHeight;
+                        staffTableHeight = clientHeight - stayHeight - staffHeadHeight - staffFooterHeight - staffSortLineHeight - collapseHeight;
+                    }
+                    this.staffMaxHeight = staffTableHeight;//赋给人员table最大高度
+                }
+                this.departMaxHeight = departTableHeight;//赋给组织table最大高度
+            },
+            //【获取组织架构权限树】
+            getOrgMenuTree(orgId) {
+                var _self = this;
+                _self.dialogOrganizationMenuTree.isShow = true;
+                _self.dialogOrganizationMenuTree.orgId = orgId;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/organization/menuTree/query',
+                    data: { organizationId: orgId },
+                    success: function (data) {
+                        if (data.success == true) {
+                            var list = data.data;
+                            _self.dialogOrganizationMenuTree.menuTree = new Array(list);
+                            _self.dialogOrganizationMenuTree.checkMenu = [];
+                            _self.setCheckOrgMenu(data.data);
+                            //data.data.children.forEach((item) => {
+                            //    if (item.children.length > 0) {
+                            //        item.children.forEach((a) => {
+                            //            if (a.children.length > 0) {
+                            //                a.children.forEach((b) => {
+                            //                    if (b.isGranted == true) {
+                            //                        checkedArr[indexArr] = b.id;
+                            //                        indexArr++;
+                            //                    }
+
+                            //                })
+
+                            //            } else {
+                            //                if (a.isGranted == true) {
+                            //                    checkedArr[indexArr] = a.id;
+                            //                    indexArr++;
+                            //                }
+                            //            }
+                            //        })
+                            //    } else {
+                            //        if (item.isGranted == true) {
+                            //            checkedArr[indexArr] = item.id;
+                            //            indexArr++;
+                            //        }
+                            //    }
+                            //})
+                            //_self.dialogOrganizationMenuTree.checkMenu = checkedArr;
+                            //_self.$refs.menuTree.setCheckedKeys(checkedArr);
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        //alert(errorThrown);
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+
+            },
+            //【设置组织架构菜单树选中项】
+            setCheckOrgMenu(OrgMenuTree) {
+                var _self = this;
+                if (OrgMenuTree.children != null || OrgMenuTree.children != undefined) {
+                    if (OrgMenuTree.children.length > 0) {
+                        if (OrgMenuTree.isGranted == true) {
+                            _self.dialogOrganizationMenuTree.checkMenu.push(OrgMenuTree.id)
+                        }
+                        for (var i = 0; i < OrgMenuTree.children.length; i++) {
+                            _self.setCheckOrgMenu(OrgMenuTree.children[i])
+                        }
+                    } else {
+                        if (OrgMenuTree.isGranted == true) {
+                            _self.dialogOrganizationMenuTree.checkMenu.push(OrgMenuTree.id)
+                        }
+                    }
+                } else {
+                    if (OrgMenuTree.isGranted == true) {
+                        _self.dialogOrganizationMenuTree.checkMenu.push(OrgMenuTree.id)
+                    }
+                }
+            },
+            //【修改权限树】
+            modifyOrgMenuTree() {
+                var _self = this;
+                $.ajax({
+                    type: 'POST',
+                    dataType: 'json',
+                    async: false,
+                    contentType: 'application/json',
+                    url: '/rest/organization/menuTree/modify',
+                    data: JSON.stringify({ OrganizationId: _self.dialogOrganizationMenuTree.orgId, GrantedList: _self.$refs.orgMenuTree.getCheckedKeys() }),
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.$notify.success({
+                                title: '成功',
+                                message: '权限修改成功'
+                            });
+                            _self.dialogOrganizationMenuTree.isShow = false;
+
+                        } else {
+                            _self.$notify.error({
+                                title: '失败',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        //alert(errorThrown);
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+            //【获取组织架构用户权限树】
+            getOrgUserMenuTree(userId) {
+                var _self = this;
+                _self.dialogOrganizationUserMenuTree.isShow = true;
+                _self.dialogOrganizationUserMenuTree.userId = userId;
+                console.log(userId)
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    async: false,
+                    url: '/rest/bmsuser/menuTree/query',
+                    data: { userId: userId, organizationId: _self.currDepartId },
+                    success: function (data) {
+                        if (data.success == true) {
+                            var list = data.data.menuTree;
+                            _self.dialogOrganizationUserMenuTree.menuTree = new Array(list);
+                            console.log(list);
+                            _self.dialogOrganizationUserMenuTree.checkMenu = [];
+                            _self.setCheckOrgUserMenu(data.data.menuTree);
+                        } else {
+                            _self.$notify.error({
+                                title: '错误',
+                                message: data.msg
+                            });
+
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        //alert(errorThrown);
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+
+            },
+            //【设置组织架构菜单树选中项】
+            setCheckOrgUserMenu(OrgUserMenuTree) {
+                var _self = this;
+                if (OrgUserMenuTree.children != null || OrgUserMenuTree.children != undefined) {
+                    if (OrgUserMenuTree.isGranted == true) {
+                        _self.dialogOrganizationUserMenuTree.checkMenu.push(OrgUserMenuTree.id)
+                    }
+                    if (OrgUserMenuTree.children.length > 0) {
+                        for (var i = 0; i < OrgUserMenuTree.children.length; i++) {
+                            _self.setCheckOrgUserMenu(OrgUserMenuTree.children[i])
+                        }
+                    } else {
+                        if (OrgUserMenuTree.isGranted == true) {
+                            _self.dialogOrganizationUserMenuTree.checkMenu.push(OrgUserMenuTree.id)
+                        }
+                    }
+                } else {
+                    if (OrgUserMenuTree.isGranted == true) {
+                        _self.dialogOrganizationUserMenuTree.checkMenu.push(OrgUserMenuTree.id)
+                    }
+                }
+            },
+            //【渲染组织架构用户权限树】
+            renderOrgUserMenuContent(createElement, { node, data, store }) {
+                var _self = this;
+
+                if (data.id == 0) { noeditdel = true; }
+                //console.log(data)
+                if (node.level > 3) { noadd = true; }
+                var str = "";
+                if (data.isUserGranted) { str = "color: green"; }
+                if (data.isUserRemoved) { str = "color: red"; }
+                var elementHtml = createElement('span', [
+                    //createElement('i', { attrs: { class: 'el-icon-error', style: str } }),
+                    createElement('span',
+                        {
+                            attrs: {
+                                style: str
+                            }
+                        },
+                        node.label),
+                ]);
+                return elementHtml;
+            },
+            //【修改权限树】
+            modifyUserOrgMenuTree() {
+                var _self = this;
+                $.ajax({
+                    type: 'POST',
+                    dataType: 'json',
+                     contentType: 'application/json',
+                    async: false,
+                    url: '/rest/bmsuser/menuTree/modify',
+                    data: JSON.stringify({
+                        userId: _self.dialogOrganizationUserMenuTree.userId,
+                        organizationId:_self.currDepartId,
+                        grantedList: _self.$refs.orgUserMenuTree.getCheckedKeys()
+                    }),
+                    success: function (data) {
+                        if (data.success == true) {
+                            _self.$notify.success({
+                                title: '成功',
+                                message: '权限修改成功'
+                            });
+                            _self.dialogOrganizationUserMenuTree.isShow = false;
+
+                        } else {
+                            _self.$notify.error({
+                                title: '失败',
+                                message: data.msg
+                            });
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        //alert(errorThrown);
+                        if (errorThrown == "Unauthorized") {
+                            window.parent.MainIndex.openLoginFrom();
+                            _self.$message({
+                                type: 'error',
+                                message: XMLHttpRequest.responseJSON.msg
+                            });
+                        } else {
+                            _self.$message({
+                                type: 'error',
+                                message: errorThrown
+                            });
+                        }
+                    }
+                });
+            },
+        }
+    }
+    var Ctor = Vue.extend(Main)
+    new Ctor().$mount('#deparment')
+</script>

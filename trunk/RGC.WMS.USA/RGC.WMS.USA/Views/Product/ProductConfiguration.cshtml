@@ -1,0 +1,344 @@
+﻿
+@{
+    ViewBag.Title = "ProductConfiguration";
+}
+
+<style>
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        text-align: center;
+        vertical-align: middle;
+        line-height: 16px;
+        position: relative;
+        margin: 8px;
+    }
+
+        input[type="checkbox"]::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #fff;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #d9d9d9
+        }
+
+        input[type="checkbox"]:checked::before {
+            content: "\2713";
+            background-color: #fff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            border: 1px solid #6fc469;
+            color: #6fc469;
+            font-size: 16px;
+            font-weight: bold;
+        }
+</style>
+<body class="plr20">
+    <div id="wrapper">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>产品管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>SKU配置总表</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-row :gutter="15">
+            <el-col :span="10">
+                <div>
+                    <el-tree :data="classlist"
+                             :props="defaultProps"
+                             node-key="id"
+                             v-on:node-click="handleNodeClick"
+                             default-expand-all
+                             :render-content="renderContent">
+                    </el-tree>
+                </div>
+            </el-col>
+            <el-col :span="14">
+                <span>【{{checkName}}】</span>
+                <el-table :data="childForm.items" size="small" highlight-current-row v-loading="listLoading" style="width: 100%;margin-top:10px;">
+                    <el-table-column type="index" min-width="60"></el-table-column>
+                    <el-table-column min-width="120" prop="eName" label="英文名">
+                    </el-table-column>
+                    <el-table-column prop="cName" label="中文名"></el-table-column>
+                    <el-table-column prop="seqNo" label="排序" sortable></el-table-column>
+                    <el-table-column prop="type" label="类别" sortable>
+                        <template slot-scope="scope">
+                            <el-tag size="small" type="success" v-if="scope.row.type==3">配件</el-tag>
+                            <el-tag size="small" type="info" v-if="scope.row.type==2">部件</el-tag>
+                        </template>
+
+                    </el-table-column>
+                    <el-table-column label="操作" width="280">
+                        <template slot-scope="scope">
+                            <el-button size="mini" v-on:click="openDetail(scope.$index)" v-if="scope.row.type==3" icon="el-icon-setting">描述管理</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <el-col :span="24" class="toolbar">
+                    <el-pagination layout="prev, pager, next" small :page-size="10" :total="total" style="float:right;" v-on:current-change="handleCurrentChange"></el-pagination>
+                </el-col>
+            </el-col>
+        </el-row>
+        <el-drawer :title="title"
+                   :visible.sync="table"
+                   direction="rtl"
+                   size="40%">
+            <div class="plr20">                
+                <el-table :data="gridData" size="small" highlight-current-row v-loading="listLoading" style="width: 100%;margin-top:10px;">
+                    <el-table-column min-width="180" prop="eName" label="英文名">
+                    </el-table-column>
+                    <el-table-column prop="cName" label="中文名"></el-table-column>
+                </el-table>
+            </div>
+
+        </el-drawer>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    title: '',
+                    table: false,
+                    gridData: [],
+                    categoryIds: [],
+                    cascader: [],
+                    classlist: [],//菜单列表
+                    defaultProps: {
+                        children: 'child',
+                        label: 'eName'
+                    },
+                    editSkuClassVisible: false,
+                    /*==编辑界面==*/
+                    editFormVisible: false,//是 否显示
+                    editLoading: false,
+                    editFormRules: {
+                        eName: [
+                            { required: true, message: '请输入英文名', trigger: 'blur' }
+                        ],
+                        // cName:[{ required: true, message: '请输入中文名称', trigger: 'blur' }]
+                    },
+                    editForm: {
+                        id: '',
+                        packageId: '',
+                        configId: '',
+                        type: 2,
+                        eName: '',
+                        cName: '',
+                        seqNo: '',
+                    },
+                    srcFull: '',
+                    //分页
+                    total: 0,
+                    total2: 0,
+                    page: 1,
+                    page2: 1,
+                    //商品界面
+                    items: [],
+                    listLoading: false,
+                    childForm: {
+                        items: [],
+                        id: '',
+                    },
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0
+                    },
+                    checkName: "未选择组件",
+                    curFittingId: 0,
+                }
+            },
+            methods: {
+                openDetail(index) {
+                    var row = this.childForm.items[index];
+                    this.table = true;
+                    this.curFittingId = row.id;
+                    this.title = row.eName + " " + row.cName + " 描述列表";
+                    this.gridData = row.children;
+                },
+                handleNodeClick(node, data, value) {
+                    var _self = this;
+                    _self.childForm.id = node.id;
+                    _self.getChildList();
+                    _self.checkName = node.eName + " " + node.cName;
+                },
+                handleSuccess(res, file, fileList) {
+                    var _self = this;
+                    var url = URL.createObjectURL(file.raw);
+                    _self.editForm.srcFull = url;
+                    _self.srcFull = url;
+                    var reader = new FileReader();
+                    reader.readAsDataURL(file.raw);
+                    reader.onload = function (e) {
+                        _self.editForm.byteStr = e.target.result;
+
+                    };
+                },
+                //【获取菜单列表】
+                GetSkuConfigTree() {
+                    var _self = this;
+                    var list = new Array({ "id": 0, "eName": "全部组件", "cName": "", "seqNo": 1, "packageId": 0, "child": [] });
+                    _self.classlist = list;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        async: false,
+                        url: '/rest/productconfig/list',
+                        success: function (data) {
+                            if (data.success == true) {
+                                list = new Array({ "id": 0, "eName": "全部组件", "cName": "", "seqNo": 1, "packageId": 0, "child": data.data });
+                                _self.classlist = list;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },//【获取菜单列表】
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getChildList();
+                },
+                //【获取该分类下商品】
+                getChildList() {
+                    var _self = this;
+                    _self.listLoading = true;
+                    if (_self.childForm.id != "") {
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            url: '/rest/productconfig/child/list',
+                            data: { packageId: _self.childForm.id, pageSize: 10, currentPage: _self.page },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.total = data.page.totalCount;
+                                    _self.childForm.items = data.data;
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                                _self.listLoading = false;
+
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                _self.listLoading = false;
+
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            },
+                            complete() {
+                                _self.listLoading = false;
+                            }
+                        });
+                    }
+                    else {
+                        _self.listLoading = false;
+                        _self.total = 0;
+                        _self.childForm.items = [];
+                        _self.$message({
+                            type: 'warning',
+                            message: "未选中任何类别"
+                        });
+                    }
+
+                },
+                openEditSkuClass(row) {
+                    var _self = this;
+                    _self.editSkuClassVisible = true;
+                    _self.categoryIds = row.categoryIds;
+                    _self.skuId = row.id;
+                    _self.getCategoryCasCader();
+                },
+
+                //【渲染树】
+                renderContent(createElement, { node, data, store }) {
+                    var _self = this;
+                    var noeditdel = false;//没有编辑和删除按钮
+                    var noadd = false;//有新增按钮
+                    if (data.id == 0) { noeditdel = true; }
+                    if (node.level > 3) { noadd = true; }
+                    var elementHtml = createElement('span', [
+                        createElement('span', {
+                            attrs: {
+                                style: node.level > 1 ? "" : "display:none"
+                            }
+                        }, "[" + data.seqNo + "]"),
+                        createElement('span', node.label + " " + data.cName),
+                        createElement('span', {
+                            attrs: {
+                                style: "position: absolute;right: 10px;top: 3px;"
+                            }
+                        }, [
+                            createElement('el-button', {
+                                attrs: {
+                                    size: "mini",
+                                    disabled: noeditdel,
+                                    plain: true,
+                                    style: node.level > 1 ? "" : "display:none",
+                                    icon: "el-icon-search",
+                                    circle: true,
+                                    title: "查看详情"
+                                }, on: {
+                                    click: function () {
+                                        cancelBubble();
+                                        _self.childForm.id = data.id;
+                                        _self.page = 1;
+                                        _self.getChildList();
+                                        _self.checkName = node.label;
+
+                                    }
+                                }
+                            }),
+                        ]),
+                    ]);
+                    return elementHtml;
+                }
+            },
+            mounted() {
+                this.GetSkuConfigTree();
+            }
+        }
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#wrapper');
+    </script>
+
+</body>

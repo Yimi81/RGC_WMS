@@ -1,0 +1,857 @@
+﻿
+@{
+    ViewData["Title"] = "Index";
+    string name = null;
+    if (!true.Equals(ViewData["signed-out"]))
+    {
+        name = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+    }
+}
+@section Styles{
+    <style>
+        body {
+            padding-right: 0 !important;
+        }
+
+        .login-panel__yzm img {
+            float: none;
+        }
+
+        /*.el-scrollbar__wrap {
+            overflow-x: hidden;
+        }
+        .list {
+            max-height: 700px;
+        }*/
+        #tab-1 {
+            display: none;
+        }
+
+        .html_load {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #333333;
+            z-index: 999;
+            display: block;
+            opacity: 0.9;
+        }
+
+        #iframe_load0 {
+            display: none !important;
+        }
+
+        .iframe_load {
+            position: absolute;
+            width: 200px;
+            height: 150px;
+            display: none;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+            background-image: url("/images/home/iframe_load.gif");
+            background-size: 100% 100%;
+        }
+
+        .html_load img {
+            position: absolute;
+            width: 250px;
+            height: 50px;
+            top: 8%;
+            margin-left: 50%;
+            transform: translateX(-125px);
+        }
+
+        #html_load {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+            background-image: url("/images/home/html_load.gif");
+            background-size: 100% 100%;
+        }
+
+        [v-cloak] {
+            display: none;
+        }
+
+        .operation_line {
+            display: flex;
+            justify-content: space-between;
+            height: 100%;
+            margin-top: 0;
+            background: none;
+        }
+
+            .operation_line div {
+                display: inline-block;
+                line-height: 34px;
+            }
+    </style>
+}
+
+<div class="h100b of">
+
+    <div class="html_load">
+        <img src="/images/logo02.png" alt="logo">
+        <div id="html_load"></div>
+    </div>
+
+    <div id="wrapper" class="h100b" v-cloak>
+        <el-header class="topbar" height="50">
+            <div class="topbar-left">
+                <!-- logo -->
+                <span class="logo">
+                    <img src="/images/logo.png" alt="" class="leftside_logo--big">
+                </span>
+                <!-- 操作 -->
+                <div class="operation">
+                    <p class="operation_user">
+                        @if (!string.IsNullOrWhiteSpace(name))
+                        {
+                            @name
+                        }
+                    </p>
+                    <el-select popper-class="operation_sel" v-model="dialogMe.user.currentOrgId" v-on:change="setCurrentOrganization">
+                        <el-option-group label="在此您可以切换职位，不同职位有不同权限">
+                            <el-option v-for="org in dialogMe.user.orgsList" :key="org.orgId" :label="org.displayName" :value="org.orgId"><i class="el-icon-check"></i><span>{{ org.displayName }}</span></el-option>
+                            <el-option value="">
+                                <div class="operation_line">
+                                    <div v-if="dialogMe.user.id > 0"><a v-on:click="dialogMe.isShow = true">个人信息</a></div>
+                                    <div v-if="dialogMe.user.id > 0"><a v-on:click="editUserPassword(dialogMe.user.userId)">修改密码</a></div>@*@Session["Manage_UserId"]*@
+                                    <div v-if="dialogMe.user.id > 0" style="padding:0 10px;background-color:#F0F0F0"><a v-on:click="logOut">退 出</a></div>
+                                    <div v-if="dialogMe.user.id <= 0" style="padding:0 10px;background-color:#F0F0F0"><a v-on:click="logOut">登录</a></div>
+                                </div>
+                            </el-option>
+                        </el-option-group>
+                    </el-select>
+                </div>
+
+            </div>
+            <a v-on:click="addTab(1,'/dashboard','Home')" class="tophome" v-bind:class="{ishome:isHome}"><i class="material-icons">home</i></a>
+        </el-header>
+
+        <el-container class="h100b">
+            <!-- 左侧菜单 -->
+            <el-aside class="leftside h-auto" v-bind:style="{ width:'auto',height: iframeHeight+'px' }">
+                <el-scrollbar style="height:100%">
+                    <el-menu :collapse="isCollapse">
+                        <!-- 折叠菜单 按钮 -->
+                        <el-menu-item index="0" class="leftside_title" v-on:click="toggleCollapse">
+                            <span slot="title">菜单导航</span>
+                            <i class="material-icons de">format_indent_decrease</i>
+                            <i class="material-icons in">format_indent_increase</i>
+                        </el-menu-item>
+                        <!-- 菜单列表 -->
+                        <template v-for="menu in menus">
+                            <!-- 无二级子菜单 -->
+                            <el-menu-item v-if="menu.children.length==0&&menu.type==1" :index="menu.id.toString()" :key="menu.id" v-on:click="addTab(menu.id,menu.path,menu.name)">
+                                <i :class="['iconfont',menu.icoName]"></i>
+                                <span slot="title">{{menu.name}}</span>
+                            </el-menu-item>
+                            <!-- 有二级子菜单 -->
+                            <el-submenu v-if="menu.children.length>0&&menu.type==1" :index="menu.id.toString()" :key="menu.id">
+                                <template slot="title">
+                                    <i :class="['iconfont',menu.icoName]"></i>
+                                    <span slot="title">{{menu.name}}</span>
+                                </template>
+                                <el-menu-item v-for="submenu in menu.children" v-if="submenu.type==2" :index="submenu.id.toString()" :key="submenu.id" v-on:click="addTab(submenu.id,submenu.path,submenu.name)">
+                                    {{submenu.name}}
+                                </el-menu-item>
+                            </el-submenu>
+                        </template>
+                    </el-menu>
+                </el-scrollbar>
+            </el-aside>
+
+            <!-- 右侧内容 -->
+            <el-container class="rightcont">
+                <el-tabs id="toptabs" class="toptabs" type="card" v-model="toptabsValue" closable v-on:tab-remove="removeTab">
+                    <el-tab-pane v-for="(item, index) in toptabs"
+                                 :key="item.name"
+                                 :label="item.title"
+                                 :name="item.name">
+                        <!-- tabs对应内容 -->
+                        <div class="iframe_load" :id="'iframe_load'+index" :loadsrc="item.content"></div>
+                        <iframe class="appiframe" :id="'appiframe'+index" style="display:none;" width="100%" :height="iframeHeight" scrolling="yes" :src="item.content" frameborder="0"></iframe>
+                    </el-tab-pane>
+                </el-tabs>
+            </el-container>
+        </el-container>
+        @*弹窗*@
+        <el-dialog title="个人信息"
+                   :visible.sync="dialogMe.isShow"
+                   size="tiny"
+                   top="10vh">
+            <el-form :model="dialogMe.user" :rules="rules" ref="form" label-width="100px">
+                <el-form-item label="登录名" prop="loginName">
+                    <el-input v-model="dialogMe.user.loginName" placeholder="登录名"></el-input>
+                </el-form-item>
+                <el-form-item label="名字" prop="firstName">
+                    <el-input v-model="dialogMe.user.firstName"></el-input>
+                </el-form-item>
+                <el-form-item label="姓氏" prop="lastName">
+                    <el-input v-model="dialogMe.user.lastName"></el-input>
+                </el-form-item>
+                <el-form-item label="邮箱地址" prop="emailAddress">
+                    <el-input v-model="dialogMe.user.emailAddress"></el-input>
+                </el-form-item>
+                <el-form-item label="联系电话" prop="mobile">
+                    <el-input v-model="dialogMe.user.mobile" placeholder="联系电话"></el-input>
+                </el-form-item>
+                <el-form-item label="手机号码" prop="telephone">
+                    <el-input placeholder="手机号码" v-model="dialogMe.user.telephone"></el-input>
+                </el-form-item>
+                <el-form-item label="传真" prop="telephone">
+                    <el-input placeholder="传真" v-model="dialogMe.user.fax"></el-input>
+                </el-form-item>
+                <el-form-item label="微信" prop="telephone">
+                    <el-input placeholder="微信" v-model="dialogMe.user.wechat"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button v-on:click="dialogMe.isShow = false">取消</el-button>
+                <el-button class="waves-effect" type="primary" v-on:click="saveUser">
+                    保存
+                </el-button>
+            </span>
+        </el-dialog>
+        <el-dialog title="修改密码"
+                   :visible.sync="dialogPwd.isShow"
+                   size="tiny">
+            <el-form :model="dialogPwd" :rules="rules" ref="passwordform" label-width="120px">
+                <el-form-item label="当前密码" prop="currentPassword">
+                    <el-input type="password" :autofocus="true" v-model="dialogPwd.currentPassword"
+                              placeholder="当前密码"></el-input>
+                </el-form-item>
+                <el-form-item label="新密码" prop="newPassword">
+                    <el-input type="password" v-model="dialogPwd.newPassword" placeholder="新密码"></el-input>
+                </el-form-item>
+                <el-form-item label="新密码 (核对)" prop="newPasswordRepeat">
+                    <el-input type="password" v-model="dialogPwd.newPasswordRepeat" placeholder="新密码 (核对)"></el-input>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+                <el-button v-on:click="dialogPwd.isShow = false">取消</el-button>
+                <el-button type="primary" v-on:click="saveUserPassword">
+                    保存
+                </el-button>
+            </span>
+        </el-dialog>
+        <el-dialog title="请登录" :visible.sync="loginForm.isShow" :close-on-click-modal="false" v-on:keyup.enter.native="submitForm('loginForm')" size="tiny">
+            <el-form :model="loginForm" :rules="loginFormRules" ref="loginForm" v-loading="loginLoading">
+                <el-form-item prop="account">
+                    <el-input type="text" v-model="loginForm.account" placeholder="账号"></el-input>
+                </el-form-item>
+                <el-form-item prop="password">
+                    <el-input type="password" v-model="loginForm.password" placeholder="密码"></el-input>
+                </el-form-item>
+                <el-form-item prop="yzm" class="login-panel__yzm">
+                    <el-input placeholder="请输入验证码" prefix-icon="el-icon-third-msnui-auth-code" v-model="loginForm.yzm"></el-input>
+                    <img v-bind:src="loginForm.validateCode" title="单击刷新图片" alt="单击刷新图片" onclick="this.src='/home/validateCode?'+Math.random();" id="loginCode">
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" style="width:100%;" v-on:click="submitForm('loginForm')" id="btn_login">登录</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+    </div>
+</div>
+@section Scripts{
+    <script>
+        var MainIndex = new Vue({
+            el: '#wrapper',
+            data() {
+                var validatePass = (rule, value, callback) => {
+                    if (value == '' || value == null) {
+                        callback(new Error('请输入密码'));
+                    } else {
+                        var patrn = /^(?![a-zA-z]+$)(?!\d+$)(?![!@@#$%^&*]+$)[a-zA-Z\d!@@#$%^&*]+$/;
+                        if (!patrn.exec(value)) {
+                            callback(new Error('密码必须同时包含数字和字母'));
+                        } else {
+                            if (this.dialogPwd.newPasswordRepeat != '') {
+                                this.$refs.passwordform.validateField('newPasswordRepeat');
+                            }
+                            callback();
+                        }
+                    }
+                };
+                var validatePass2 = (rule, value, callback) => {
+                    if (value == '' || value == null) {
+                        callback(new Error('请再次输入密码'));
+                    } else if (value !== this.dialogPwd.newPassword) {
+                        callback(new Error('两次输入密码不一致!'));
+                    } else {
+                        callback();
+                    }
+                };
+                return {
+                    loginLoading: false,
+                    isCollapse: false,//左侧菜单折叠
+                    iframeHeight: 600,//iframe默认高度
+                    // 左侧菜单列表
+                    menus: [
+                        //{
+                        //    id: 1,
+                        //    path: "",
+                        //    name: "系统管理",
+                        //    icoName: "",
+                        //    type: 1,
+                        //    isMenu: true,
+                        //    children: [{
+                        //        id: 2,
+                        //        path: "/administration/user",
+                        //        name: "用户",
+                        //        icoName: "",
+                        //        type: 2,
+                        //        isMenu: true,
+                        //        children: []
+                        //    }, {
+                        //        id: 3,
+                        //        path: "/administration/menu",
+                        //        name: "菜单",
+                        //        icoName: "",
+                        //        type: 2,
+                        //        isMenu: true,
+                        //        children: []
+                        //    }
+                        //    , {
+                        //    id: 4,
+                        //    path: "/administration/OrganizationUnits",
+                        //    name: "组织架构",
+                        //    icoName: "",
+                        //    type: 2,
+                        //    isMenu: true,
+                        //    children: []
+                        //    }
+                        //    ]
+                        //}
+                    ],
+                    toptabsValue: '1',//tab选中name值，以name区分，name=id
+                    // 头部tab
+                    toptabs: [
+                        //{
+                        //    title: '工作台',
+                        //    name: '1',
+                        //    content: 'dashboard',
+                        //}
+                    ],
+                    fetchParam: {},
+                    rules: {
+                        currentPassword: [{ required: true, message: '请输入当前密码', trigger: 'change' }],
+                        newPassword: [{ validator: validatePass, trigger: ['blur', 'change'] }],
+                        newPasswordRepeat: [{ validator: validatePass2, trigger: ['blur', 'change'] }],
+                        emailAddress: [{ required: true, message: '请输入邮箱地址', trigger: 'change' }, { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }],
+                    },
+                    user: {},
+                    dialogMe: {
+                        isShow: false,
+                        user: { id: 0 }
+                    },
+                    dialogPwd: {
+                        isShow: false,
+                        currentPassword: void 0,
+                        newPassword: void 0,
+                        newPasswordRepeat: void 0,
+                        userId: 0
+                    },
+                    /*==请登录界面==*/
+                    loginForm: {
+                        isShow: false,
+                        account: '',
+                        password: '',
+                        yzm: '',
+                        validateCode: ''
+                    },
+                    loginFormRules: {
+                        account: [
+                            { required: true, message: '请输入账号', trigger: 'blur' },
+                        ],
+                        password: [
+                            { required: true, message: '请输入密码', trigger: 'blur' },
+                        ],
+                        yzm: [
+                            { required: true, message: '验证码不能为空', trigger: 'blur' }
+                        ]
+                    },
+                    LoginUrl: '/login',
+                    isHome: false,
+                };
+            },
+            methods: {
+                //【菜单折叠】
+                toggleCollapse() {
+                    this.isCollapse = !this.isCollapse;
+                },
+                //【打开右侧标签页面】
+                addTab(tabId, targetPath, targetName) {
+                    let _self = this;
+                    let tabs = this.toptabs;
+                    let has = false;
+                    if (tabs.length > 0) {
+                        tabs.forEach((tab, index) => {
+                            if (tab.name === tabId.toString()) {
+                                has = true;
+                            }
+                        });
+                    }
+
+                    if (!has) {
+                        _self.toptabs.push({
+                            title: targetName,
+                            name: tabId.toString(),
+                            content: targetPath
+                        });
+                        this.addLoading(this.toptabs.length - 1);
+                    }
+                    this.toptabsValue = tabId.toString();
+                    this.changeFrameHeight();
+                },
+                //【移除右侧标签页面】
+                removeTab(targetName) {
+                    let tabs = this.toptabs;
+                    let activeName = this.toptabsValue;
+                    if (activeName === targetName) {
+                        tabs.forEach((tab, index) => {
+                            if (tab.name === targetName) {
+                                let nextTab = tabs[index + 1] || tabs[index - 1];
+                                if (nextTab) {
+                                    activeName = nextTab.name;
+                                }
+                            }
+                        });
+                    }
+
+                    this.toptabsValue = activeName;
+                    this.toptabs = tabs.filter(tab => tab.name !== targetName);
+                },
+                //【打开标签页面】
+                addTabByIframe(tabName, targetPath, targetName) {
+                    let _self = this;
+                    let tabs = this.toptabs;
+                    let has = false;
+                    if (tabs.length > 0) {
+                        tabs.forEach((tab, index) => {
+                            if (tab.name === tabName) {
+                                has = true;
+                            }
+                        });
+                    }
+
+                    if (!has) {
+                        _self.toptabs.push({
+                            title: targetName,
+                            name: tabName,
+                            content: targetPath
+                        });
+                        this.addLoading(this.toptabs.length - 1);
+                    }
+                    this.toptabsValue = tabName;
+                    this.changeFrameHeight();
+                },
+                //【获取菜单列表】
+                getMenus() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        async: false,
+                        url: '/rest/bmsmenu/query',
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.menus = data.data;
+                                //获取当前用户
+                                //_self.getUserCurrent();
+                            } else {
+                                if (data.code == 3) {
+                                    _self.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                _self.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //【获取当前用户】
+                getUserCurrent() {
+                    var _self = this;
+                    //_self.dialogMe.isShow = true
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/bmsuser/detail/current',
+                        data: {},
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.dialogMe.user = data.data;
+                                console.log(_self.dialogMe)
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                _self.loginForm.isShow = true;
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+
+                        }
+                    });
+                },
+                //【设置用户当前职位】
+                setCurrentOrganization: function () {
+                    var _self = this;
+                    //_self.dialogMe.isShow = true
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/bmsuser/current/organization/set',
+                        data: { organizationId: _self.dialogMe.user.currentOrgId },
+                        success: function (data) {
+                            if (data.success == true) {
+                                //_self.getUserCurrent();
+                                _self.getMenus();
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                _self.loginForm.isShow = true;
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+
+                        }
+                    });
+
+                },
+                saveUser: function () {
+                    var _self = this;
+                    //修改用户
+                    _self.$refs.form.validate((valid) => {
+                        if (valid) {
+                            $.ajax({
+                                type: 'POST',
+                                url: '/rest/bmsuser/modify',
+                                data: _self.dialogMe.user,
+                                success: function (data) {
+                                    if (data.success == true) {
+                                        _self.$notify.success({
+                                            title: '成功',
+                                            message: "个人信息修改成功"
+                                        });
+                                        _self.dialogMe.isShow = false;
+                                    } else {
+                                        _self.$notify.error({
+                                            title: '错误',
+                                            message: data.msg
+                                        });
+                                    }
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    if (errorThrown == "Unauthorized") {
+                                        _self.loginForm.isShow = true;
+                                        _self.$message({
+                                            type: 'error',
+                                            message: XMLHttpRequest.responseJSON.msg
+                                        });
+                                    } else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: errorThrown
+                                        });
+                                    }
+                                }
+                            });
+                        } else {
+                            console.log('error submit!!');
+                            return false;
+                        }
+                    })
+
+                },
+                editUserPassword(userId) {
+                    var _self = this;
+                    _self.dialogPwd.isShow = true;
+                    _self.dialogPwd.userId = userId;
+                },
+                saveUserPassword: function () {
+                    var _self = this;
+                    _self.$refs.passwordform.validate((valid) => {
+                        if (valid) {
+                            //修改用户密码
+                            $.ajax({
+                                type: 'GET',
+                                url: '/rest/bmsuser/password/modify',
+                                data: {
+                                    userId: _self.dialogPwd.userId,
+                                    currentPassword: _self.dialogPwd.currentPassword,
+                                    newPassword: _self.dialogPwd.newPassword
+                                },
+                                success: function (data) {
+                                    if (data.success == true) {
+                                        _self.$notify.success({
+                                            title: '成功',
+                                            message: "密码修改成功"
+                                        });
+                                        _self.dialogPwd.isShow = false;
+                                    } else {
+                                        _self.$notify.error({
+                                            title: '错误',
+                                            message: data.msg
+                                        });
+                                    }
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    if (errorThrown == "Unauthorized") {
+                                        _self.loginForm.isShow = true;
+                                        _self.$message({
+                                            type: 'error',
+                                            message: XMLHttpRequest.responseJSON.msg
+                                        });
+                                    } else {
+                                        _self.$message({
+                                            type: 'error',
+                                            message: errorThrown
+                                        });
+                                    }
+                                }
+                            });
+                        } else {
+                            console.log('error submit!!');
+                            return false;
+                        }
+                    })
+                },
+                logOut() {
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/bmsuser/logout',
+                        data: {
+                        },
+                        success: function (data) {
+                            if (data.success == true) {
+                                //未登录
+                                location.href = "/home/login";
+                            } else {
+                                alert(data.msg);
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            console.log(errorThrown);
+                        }
+                    });
+                },
+                //【设置iframe高度自适应】
+                changeFrameHeight() {
+                    this.iframeHeight = document.documentElement.clientHeight - 50;
+                },
+                //保存修改
+                save() { },
+                // 【用户登录】
+                submitForm(formName) {
+                    var _self = this;
+                    this.$refs[formName].validate((valid) => {
+                        if (valid) {
+                            _self.loginLoading = true;
+                            //alert('submit!');
+                            $.ajax({
+                                type: 'POST',
+                                url: '/rest/bmsuser/login',
+                                dataType: 'json',
+                                contentType: 'application/json',
+
+                                data: JSON.stringify({
+                                    UserName: this.loginForm.account.trim(),
+                                    Password: this.loginForm.password.trim(),
+                                    ValidateCode: this.loginForm.yzm.trim()
+                                }),
+                                success: function (data) {
+                                    if (data.success == true) {
+                                        //location.href = "/";
+                                        _self.$notify.success({
+                                            title: '成功',
+                                            message: '登录成功'
+                                        });
+                                        _self.loginForm.isShow = false;
+                                        _self.getMenus();
+
+                                        $('iframe').each(function () {
+                                            if ($(this).css("display") != "none") {
+                                                if ($(this).attr('src') == "dashboard") {
+
+                                                } else if ($(this).attr('src').toLowerCase().indexOf("create") != -1
+                                                    || $(this).attr('src').toLowerCase().indexOf("add") != -1
+                                                    || $(this).attr('src').toLowerCase().indexOf("update") != -1
+                                                    || $(this).attr('src').toLowerCase().indexOf("modify") != -1) {
+                                                    _self.$confirm('是否刷新当前页?', '提示', {
+                                                        type: 'warning'
+                                                    }).then(() => {
+                                                        $(this).attr('src', $(this).attr('src'));
+                                                    }).catch(() => {
+
+                                                    });
+                                                } else {
+                                                    $(this).attr('src', $(this).attr('src'));
+                                                }
+                                                return;
+                                            }
+                                        });
+
+                                    } else {
+                                        _self.$notify.error({
+                                            title: '错误',
+                                            message: data.msg
+                                        });
+                                    }
+                                    _self.loginLoading = false;
+                                },
+                                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                    console.log(errorThrown);
+                                    _self.loginLoading = false;
+                                }
+                            });
+                        } else {
+                            console.log('error submit!!');
+                            _self.loginLoading = false;
+                            return false;
+                        }
+                    });
+                },
+                openLoginFrom() {
+                    var _self = this;
+                    _self.loginForm = {
+                        isShow: true,
+                        account: '',
+                        password: '',
+                        yzm: '',
+                        validateCode: '/home/validateCode?' + Math.random(),
+                    };
+                    //alert($('#loginCode').attr('src'));
+                    //$('#loginCode').attr('src', 'validateCode?' + Math.random());
+                },
+                addLoading(index) {
+                    Vue.nextTick(function () {
+                        $(".iframe_load").css("display", "block");
+                        $("#appiframe" + index)[0].onload = $("#appiframe" + index)[0].onreadystatechange = function () {
+                            if (this.readyState && this.readyState != 'complete') return;
+                            else {
+                                $(".iframe_load").fadeOut(100);
+                                $(".appiframe").fadeIn(100);
+                            }
+                        }
+                    })
+                }
+            },
+            created: function () {
+                // 设置iframe高度
+                this.changeFrameHeight();
+                this.getMenus();
+                this.getUserCurrent();
+                //判断sessionStorage
+                if (JSON.parse(sessionStorage.getItem("toptabs"))) {
+                    this.toptabs = JSON.parse(sessionStorage.getItem("toptabs"));
+                    var _self = this;
+                    Vue.nextTick(function () {
+                        var index;
+                        _self.toptabs.some((currentValue, index1) => {
+                            if (currentValue.name == _self.toptabsValue) {
+                                index = index1;
+                                return;
+                            }
+                        })
+                        $("#appiframe" + index)[0].onload = $("#appiframe" + index)[0].onreadystatechange = function () {
+                            if (this.readyState && this.readyState != 'complete') return;
+                            else {
+                                $(".appiframe").fadeIn(100);
+                                $(".html_load").fadeOut(100);
+                            }
+                        }
+                    })
+                } else {
+                    this.addTab(1, '/home/dashboard', 'Home');
+                }
+                if (sessionStorage.getItem("toptabsValue")) {
+                    this.toptabsValue = sessionStorage.getItem("toptabsValue");
+                }
+            },
+            mounted() {
+                // 监听屏幕大小变化，改变iframe高度
+                var _self = this;
+                window.onresize = function () { _self.iframeHeight = document.documentElement.clientHeight - 50; }
+                if (JSON.parse(sessionStorage.getItem("toptabs"))) {
+                    return;
+                } else {
+                    setTimeout(function () {
+                        $(".html_load").fadeOut(100);
+                    }, 8000)
+                }
+
+                const returnValue = 'Are you sure you want to lose unsaved changes?';
+                window.onbeforeunload = e => {
+                    return returnValue;
+                };
+            },
+            watch: {
+                toptabs(newvalue, oldvalue) {
+                    sessionStorage.setItem("toptabs", JSON.stringify(newvalue));
+                },
+                toptabsValue() {
+                    sessionStorage.setItem("toptabsValue", this.toptabsValue);
+                }
+            }
+        })
+                        //var Ctor = Vue.extend(MainIndex);
+                        //new Ctor().$mount('#wrapper');
+    </script>
+}

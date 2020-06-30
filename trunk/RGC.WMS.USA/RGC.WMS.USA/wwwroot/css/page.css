@@ -1,0 +1,132 @@
+/*菜单管理页面*/
+.el-tree-node__content {
+    position: relative;
+    height: 35px;
+}
+.el-tree-node__content .btns {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    margin-top: -14px;
+}
+/*sku添加页面*/
+.el-upload {
+    display: inline-block;
+    text-align: center;
+    cursor: pointer;
+    outline: 0;
+}
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 178px;
+    height: 178px;
+    line-height: 178px;
+    text-align: center;
+}
+.el-upload--picture-card {
+    background-color: #fbfdff;
+    border: 1px dashed #c0ccda;
+    border-radius: 6px;
+    box-sizing: border-box;
+    width: 148px;
+    height: 148px;
+    line-height: 146px;
+    vertical-align: top;
+}
+.el-upload-list-my {
+    margin-left: 5px;
+    display: block !important;
+    float: left;
+}
+
+.pcd {
+    float: left;
+    padding-bottom: 10px;
+    width: 148px
+}
+
+.administration-tenant-container .search > section > * {
+    margin: 0 10px 10px 0;
+}
+.administration-tenant-container .search .el-input {
+    width: auto;
+}
+.administration-tenant-container .pagin {
+    float: right;
+    margin-top: 15px;
+}
+/*.el-tabs__active-bar {
+    background-color: #bf1c13;
+}
+.el-tabs__item.is-active {
+    color: #bf1c13;
+}
+.el-table--striped .el-table__body tr.el-table__row--striped.current-row td, .el-table__body tr.current-row > td, .el-table__body tr.hover-row.current-row > td, .el-table__body tr.hover-row.el-table__row--striped.current-row > td, .el-table__body tr.hover-row.el-table__row--striped > td, .el-table__body tr.hover-row > td {
+    background-color: #f5f7fa;
+}
+.el-dialog__headerbtn:focus .el-dialog__close, .el-dialog__headerbtn:hover .el-dialog__close {
+    color: #303133;
+}
+.el-checkbox__input.is-indeterminate .el-checkbox__inner::before {
+    background-color: #303133;
+}
+.el-checkbox__inner:hover, .el-checkbox__input.is-focus .el-checkbox__inner, .el-radio__inner:hover {
+    border-color: #606266;
+}
+复选框样式
+.el-checkbox__input.is-checked .el-checkbox__inner, .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+    background-color: #efefef;
+    border-color: #dcdfe6;
+}
+复选框选中样式
+.el-checkbox__inner::after {
+    border: 1px solid #303133;
+    border-left: 0;
+    border-top: 0;
+}
+消息提示框样式
+.el-message--success, .el-tag--success, .el-button--success.is-plain {
+    background-color: #ecf5ff;
+    border-color: #d9ecff;
+    color: #409eff;
+}
+消息提示框内容样式
+.el-message .el-icon-success, .el-message--success .el-message__content, .el-tag--success .el-tag__close {
+    color: #409eff;
+}
+关闭按钮
+.el-tag--success .el-tag__close:hover{
+    background-color:#409eff;
+}
+单选框/复选框 选中样式
+.el-radio__input.is-checked + .el-radio__label, .el-checkbox__input.is-checked + .el-checkbox__label {
+    color: #242424;
+}
+.el-radio__input.is-checked .el-radio__inner {
+    border-color: #dcdfe6;
+    background-color: #efefef;
+}
+.el-radio__inner::after {
+    background-color: #606266;
+}
+.el-form-item.is-success .el-input__inner {
+    border-color: #dcdfe6;
+}
+选中选项hover样式
+.el-tabs__item:hover {
+    color: #bdbdbd;
+}
+按钮hover样式，浅灰第，灰字
+.el-button.is-plain:focus, .el-button.is-plain:hover {
+    color: #606266;
+    border-color: #dcdfe6;
+    background-color: #efefef;
+}*/

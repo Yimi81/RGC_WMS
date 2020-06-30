@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "dgSpecHash": "rFw64I6/CQH4ODa7Zp6n77g8l3ObGfTLmpkFdNZ00Cz8QZxgOO6gRIRa+KopE7gJAQlTyTBTET4BpPBmwntiew==",
+  "success": true,
+  "projectFilePath": "D:\\SVN\\RGC\\RGC.WMS\\trunk\\RGC.WMS.USA\\RGC.WMS.USA.Domain\\RGC.WMS.USA.Domain.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Dev-10\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\3.1.4\\microsoft.extensions.dependencyinjection.abstractions.3.1.4.nupkg.sha512",
+    "C:\\Users\\Dev-10\\.nuget\\packages\\microsoft.extensions.options\\3.1.4\\microsoft.extensions.options.3.1.4.nupkg.sha512",
+    "C:\\Users\\Dev-10\\.nuget\\packages\\microsoft.extensions.primitives\\3.1.4\\microsoft.extensions.primitives.3.1.4.nupkg.sha512",
+    "C:\\Users\\Dev-10\\.nuget\\packages\\microsoft.netcore.platforms\\3.1.0\\microsoft.netcore.platforms.3.1.0.nupkg.sha512",
+    "C:\\Users\\Dev-10\\.nuget\\packages\\microsoft.win32.systemevents\\4.7.0\\microsoft.win32.systemevents.4.7.0.nupkg.sha512",
+    "C:\\Users\\Dev-10\\.nuget\\packages\\newtonsoft.json\\12.0.3\\newtonsoft.json.12.0.3.nupkg.sha512",
+    "C:\\Users\\Dev-10\\.nuget\\packages\\system.drawing.common\\4.7.0\\system.drawing.common.4.7.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,1656 @@
+﻿
+@{
+    ViewBag.Title = "SkuPlatform";
+}
+<link rel="stylesheet" href="/lib/elFinder/lib/jquery-ui/themes/base/all.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/elfinder.full.css" />
+<link rel="stylesheet" href="/lib/elFinder/lib/elfinder/css/theme.css" />
+<style>
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        text-align: center;
+        vertical-align: middle;
+        line-height: 16px;
+        position: relative;
+        margin: 8px;
+    }
+
+    .avatar {
+        width: 200px;
+        height: 200px;
+        display: block;
+    }
+
+    input[type="checkbox"]::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: #fff;
+        width: 100%;
+        height: 100%;
+        border: 1px solid #d9d9d9
+    }
+
+    input[type="checkbox"]:checked::before {
+        content: "\2713";
+        background-color: #fff;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        border: 1px solid #6fc469;
+        color: #6fc469;
+        font-size: 16px;
+        font-weight: bold;
+    }
+</style>
+<body class="plr20">
+    <div id="skuPlatform">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>电商管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>平台在售产品信息</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+
+
+        <el-col :span="24" class="toolbar">
+            <el-form :inline="true" size="small">
+                <el-form-item>
+                    <el-input placeholder="型号和名称" v-model="itemForm.key" clearable></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-input placeholder="asinId walmartSkuId ebayItemId" v-model="itemForm.uniqueId" clearable></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-select v-model="itemForm.id" placeholder="请选择平台" clearable>
+                        <el-option v-for="item in platformlist"
+                                   :key="item.id"
+                                   :label="item.eName"
+                                   :value="item.id">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button v-on:click="search" icon="el-icon-search">搜索</el-button>
+                </el-form-item>
+                <el-form-item>
+                    <el-button v-on:click="addItem" type="primary" icon="el-icon-plus">添加在售产品</el-button>
+                </el-form-item>
+                <el-form-item>
+                    <el-button v-on:click="refreshDictionary" icon="el-icon-finished" type="danger" plain>获取当日零售价</el-button>
+                </el-form-item>
+                @*<el-form-item>
+                    <el-button v-on:click="syncItemList" icon="el-icon-sort" type="warning" plain>同步</el-button>
+                </el-form-item>*@
+            </el-form>
+        </el-col>
+        <!--编辑界面-->
+        <el-dialog title="编辑" :visible.sync="editFormVisible" :close-on-click-modal="false" width="600px">
+            <el-form :model="editForm" label-width="150px" size="small" :rules="editFormRules" ref="editForm">
+                <el-form-item label="英文名称：">
+                    <el-input v-model="editForm.ename" style="width:350px"></el-input>
+                </el-form-item>
+                <el-form-item label="中文名称：">
+                    <el-input v-model="editForm.cname" style="width:350px"></el-input>
+                </el-form-item>
+                <el-form-item label="是否调用接口：">
+                    <el-checkbox v-model="editForm.isAPI"></el-checkbox>
+                </el-form-item>
+                <el-form-item label="是否爬虫：">
+                    <el-checkbox v-model="editForm.isPython"></el-checkbox>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button v-on:click.native="editFormVisible = false">取消</el-button>
+                <el-button type="primary" v-on:click="editSubmit" :loading="editLoading">确定</el-button>
+            </div>
+        </el-dialog>
+        @*<span>【{{checkName}}】</span>*@
+    <el-table :data="itemForm.items" size="small" highlight-current-row v-loading="listLoading" style="width: 100%;margin-top:10px;"  v-on:selection-change="handleSelectionChange">
+        @*<el-table-column type="selection"
+                         width="55">
+        </el-table-column>*@
+        @*<el-table-column type="index" min-width="60"></el-table-column>*@
+        <el-table-column prop="id" label="id" width="50"></el-table-column>
+        <el-table-column prop="productId" label="产品ID" width="80"></el-table-column>
+        <el-table-column prop="factoryModel" label="型号" min-width="120" sortable></el-table-column>
+        <el-table-column min-width="180" prop="itemName" label="产品名">
+        </el-table-column>
+        <el-table-column min-width="100" prop="srcFull" label="图片">
+            <template slot-scope="scope">
+                <img :src="scope.row.srcFull" class="pimg" alt="no image" v-if="scope.row.srcFull!=''" height="50">
+            </template>
+        </el-table-column>
+        <el-table-column min-width="100" prop="platformName" label="平台名称" sortable>
+        </el-table-column>
+        <el-table-column min-width="100" prop="wholeSalePriceString" label="批发价" align="center">
+            <template slot-scope="scope">
+                <p v-if="scope.row.platformId==1||scope.row.platformId==3||scope.row.platformId==7||scope.row.platformId==10">-</p>
+                <p v-else>{{scope.row.wholeSalePriceString}}</p>
+            </template>
+        </el-table-column>
+        <el-table-column min-width="100" prop="retailPriceString" label="当日零售价">
+        </el-table-column>
+        <el-table-column min-width="100" label="预生效价格">
+            <template slot-scope="scope">
+                <el-tooltip class="item" effect="light" placement="top" v-if="scope.row.platformId==10">
+                    <div slot="content" style="width:250px">
+                        生效时间：{{scope.row.validTimeString}}
+                    </div>
+                    <p v-if="new Date().getTime()>new Date(scope.row.validTime).getTime()" style="color:limegreen">
+                        {{scope.row.preRetailPriceString}}
+                    </p>
+                    <p v-else style="color:orange">
+                        {{scope.row.preRetailPriceString}}
+
+                    </p>
+                </el-tooltip>
+                <p v-if="scope.row.platformId!=10">
+                    -
+                </p>
+            </template>
+        </el-table-column>
+
+        <el-table-column min-width="50" prop="platformItemUrl" label="链接">
+            <template slot-scope="scope">
+                <el-tooltip class="item" effect="dark" placement="top-start">
+                    <div slot="content" style="width:250px">
+                        {{scope.row.platformItemUrl}}
+                    </div>
+                    <p v-if="scope.row.platformItemUrl" style="color:dodgerblue">
+                        <el-link :href="scope.row.platformItemUrl" target="_blank"><i class="el-icon-paperclip"></i></el-link>
+                    </p>
+
+                </el-tooltip>
+            </template>
+        </el-table-column>
+        <el-table-column min-width="100" prop="uniqueId" label="唯一标识">
+        </el-table-column>
+        <el-table-column min-width="80" prop="status" label="产品状态">
+            <template slot-scope="scope">
+                <el-tag type="success" v-if="scope.row.status==3" size="mini">正常</el-tag>
+                <el-tag type="info" v-else size="mini">异常</el-tag>
+            </template>
+        </el-table-column>
+        <el-table-column min-width="80" prop="isValid" label="平台状态">
+            <template slot-scope="scope">
+                <el-tag type="info" v-if="scope.row.isValid==0" size="mini">失效</el-tag>
+                <el-tag type="success" v-else size="mini">有效</el-tag>
+            </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+            <template slot-scope="scope">
+
+                <el-dropdown trigger="click" size="small">
+                    <el-button size="mini" class="mb5" style="width:100px;">
+                        操作
+                        <i class="el-icon-caret-bottom el-icon--right"></i>
+                    </el-button>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item v-if="scope.row.platformId!=10">
+                            <div v-on:click="addComp(scope.row)">添加竞品</div>
+                        </el-dropdown-item>
+                        <el-dropdown-item>
+                            <div v-on:click="openEditSkuPlatform(scope.row)">修改信息</div>
+                        </el-dropdown-item>
+
+                        <el-dropdown-item v-if="!(scope.row.platformId==1||scope.row.platformId==3||scope.row.platformId==7||scope.row.platformId==10)">
+                            <div v-on:click="openEditItemPrice(scope.row)">修改批发价</div>
+                        </el-dropdown-item>
+                        <el-dropdown-item v-if="scope.row.platformId==10">
+                            <div v-on:click="openEditItemPrice(scope.row)">修改价格申请</div>
+                        </el-dropdown-item>
+                        <el-dropdown-item v-if="scope.row.platformId!=10">
+                            <div v-on:click="getCompList(scope.row.id)">查看竞品</div>
+                        </el-dropdown-item>
+                        <el-dropdown-item>
+                            <div v-on:click="deleteSkuPlatform(scope.row.id)">删除</div>
+                        </el-dropdown-item>
+                        @*<el-dropdown-item v-if="scope.row.platformId==10&&scope.row.preRetailPrice!=0">
+                            <div v-on:click="syncItemPrice(scope.row.id,scope.row.preRetailPriceString,scope.row.validTimeString)">下发价格<i class="el-icon-sort"></i></div>
+                        </el-dropdown-item>*@
+                        <el-dropdown-item v-if="scope.row.platformId==10">
+                            <div v-on:click="syncItemStatus(scope.row.id,scope.row.status)">同步状态<i class="el-icon-sort"></i></div>
+                        </el-dropdown-item>
+                        <el-dropdown-item v-if="scope.row.platformId==10">
+                            <div v-on:click="syncSingleItem(scope.row.id)">同步资料<i class="el-icon-sort"></i></div>
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+                <el-button size="mini" :type="scope.row.isValid==1?'warning':'success'" v-on:click="statusModify(scope.row.id,scope.row.isValid)" plain>
+                    {{scope.row.isValid==1?'失效':'生效'}}
+                </el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+        <!--工具条-->
+        <el-col :span="24" class="toolbar">
+            <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange2" :current-page="page2" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total2" style="float:right;">
+            </el-pagination>
+        </el-col>
+
+        <el-drawer title="修改价格" :visible.sync="editItemPriceVisible"
+                   direction="rtl"
+                   custom-class="demo-drawer"
+                   ref="drawer"
+                   size="40%">
+            <el-form :model="itemPriceForm" label-width="150px" ref="editForm">
+
+                <el-form-item label="产品名" prop="itemName">
+                    <el-input :placeholder="itemPriceForm.itemName" :disabled="true" style="width:80%;"></el-input>
+                </el-form-item>
+                <el-form-item label="产品型号" prop="factoryModel">
+                    <el-input :placeholder="itemPriceForm.factoryModel" :disabled="true" style="width:80%;"></el-input>
+                </el-form-item>
+                <el-form-item label="平台名称" prop="platformName">
+                    <el-input :placeholder="itemPriceForm.platformName" :disabled="true" style="width:80%;"></el-input>
+                </el-form-item>
+                <el-form-item label="批发价" prop="wholeSalePriceString" v-if="itemPriceForm.platformId!=10">
+                    <el-input-number v-model="itemPriceForm.wholeSalePriceString" :controls="false" :min="0" :precision="2" style="width:80%;"></el-input-number>
+                </el-form-item>
+                <el-form-item label="设置零售价" prop="retailPriceString" v-if="itemPriceForm.platformId==10">
+                    <el-input-number v-model="itemPriceForm.retailPriceString" :controls="false" :min="0" :precision="2" style="width:80%;"></el-input-number>
+                </el-form-item>
+                <el-form-item label="生效时间" prop="validTimeString" v-if="itemPriceForm.platformId==10">
+                    <el-date-picker v-model="itemPriceForm.validTimeString" type="datetime" placeholder="选择日期时间" default-time="12:00:00"></el-date-picker>
+                </el-form-item>
+                <el-form-item label="生效时间" prop="level" v-if="itemPriceForm.platformId==10">
+                    <el-radio v-model="itemPriceForm.level" label="0">正常</el-radio>
+                    <el-radio v-model="itemPriceForm.level" label="1">紧急</el-radio>
+                </el-form-item>
+            </el-form>
+            <div style="float:right;margin:10px">
+                <el-button type="primary" size="small" v-on:click="savePrice()">保 存</el-button>
+            </div>
+
+        </el-drawer>
+
+        <!--竞品列表-->
+        <el-drawer title="竞品列表" :visible.sync="compVisible"
+                   @*:before-close="handleClose"*@
+                   direction="rtl"
+                   custom-class="demo-drawer"
+                   ref="drawer"
+                   size="50%">
+            <el-table class="data-table" size="small" v-loading="compLoading" :data="compList" :fit="true" border>
+                <el-table-column type="index"
+                                 width="50">
+                </el-table-column>
+                <el-table-column min-width="40" prop="id" label="ID">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.id}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="200" prop="name" label="产品名">
+                    <template slot-scope="scope1">
+                        <el-link type="warning" v-on:click="skuDetail(scope1.row.id)">{{scope1.row.name}}</el-link>
+                    </template>
+                </el-table-column>
+                <el-table-column width="120" label="图片" align="center">
+                    <template slot-scope="scope1">
+                        <img v-if="scope1.row.srcFull" class="pimg" alt="no image" :src="scope1.row.srcFull" height="50">
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="100" prop="factoryModel" label="工厂型号">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.factoryModel}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="150" prop="editTime" label="上次修改时间">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.modifyTimeString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="250" label="操作">
+                    <template slot-scope="scope">
+                        <el-dropdown trigger="click" size="small">
+                            <el-button size="mini" class="mb5" style="width:100px;">
+                                操作
+                                <i class="el-icon-caret-bottom el-icon--right"></i>
+                            </el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item>
+                                    <div v-on:click="openEditcompPlatform(scope.row)">修改信息</div>
+                                </el-dropdown-item>
+                                <el-dropdown-item>
+                                    <div v-on:click="deletecomp(scope.row.id)">删除</div>
+                                </el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </template>
+                </el-table-column>
+            </el-table>
+
+        </el-drawer>
+        <el-drawer title="添加竞品"
+                   @*:before-close="handleClose"*@
+                   :visible.sync="dialog"
+                   direction="rtl"
+                   custom-class="demo-drawer"
+                   ref="drawer"
+                   size="50%">
+            <div class="demo-drawer__content">
+                <el-form :inline="true" :model="compProduct" ref="compProduct" label-width="200px" class="skuform" label-position="right" size="mini">
+
+                    <div slot="header">
+                        <span slot="header" class="step-jump pr" id="sku_baseInfo">
+                            <i class="tip-tit"><i class="pr z-in2 pl10">添加竞品</i></i>
+                        </span>
+                    </div>
+                    <el-row>
+                        <el-form-item label="Product Name(产品名称)" prop="itemName">
+                            <el-input v-model="compProduct.name" type="textarea" :rows="1" :autosize="{ minRows: 2, maxRows: 4}"
+                                      placeholder="产品名称" class="w259" />
+                        </el-form-item>
+                        <el-form-item label="Model(型号)" prop="factoryModel" :rules="[{ required: true, message: '请输入型号', trigger: 'blur' }]">
+                            <el-input v-model="compProduct.factoryModel" class="w259"></el-input>
+                        </el-form-item>
+                        <el-form-item label="Brand(品牌)" prop="factoryModel">
+                            <el-input v-model="compProduct.brandName" class="w259"></el-input>
+                        </el-form-item>
+                        <el-form-item label="平台" prop="platformId">
+                            <el-select v-model="compProduct.platformId" placeholder="请选择平台" size="mini" clearable class="w259" disabled>
+                                <el-option v-for="item in platformlist"
+                                           :key="item.id"
+                                           :label="item.ename"
+                                           :value="item.id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-row>
+                    <el-row>
+                        <el-form-item label="关联产品">
+                            <el-row>
+                                关联产品Id:{{compProduct.productId}}
+                            </el-row>
+                            <el-row>
+                                关联在售产品Id:{{compProduct.itemId}}
+                            </el-row>
+                        </el-form-item>
+                        <el-form-item label="唯一标识">
+                            <el-input v-model.trim="compProduct.uniqueId" class="w259"></el-input>
+                        </el-form-item>
+                    </el-row>
+
+                    <el-row>
+
+
+                        <el-form-item label="平台链接">
+                            <el-input v-model="compProduct.platformUrl" type="textarea" :rows="4"
+                                      placeholder="产品链接" class="lianjie_textarea w259" />
+                        </el-form-item>
+
+                        <el-form-item label="Remark (产品备注)">
+                            <el-input v-model="compProduct.remarks" type="textarea" :rows="4"
+                                      placeholder="Remark (产品备注)" class="w259" />
+                        </el-form-item>
+                    </el-row>
+                    <el-row>
+                        <el-form-item label="Picture(产品示意图) (320*320)" prop="imageMain">
+                            <div class="m-t-10 avatar-uploader" v-on:click="openFileManage()">
+                                <div class="el-upload el-upload--text">
+                                    <img v-if="compMainSrc" :src="compMainSrc" class="avatar">
+                                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                                </div>
+                            </div>
+                        </el-form-item>
+                    </el-row>
+
+                </el-form>
+
+                <div style="float:right;margin:10px">
+                    <el-button v-on:click="dialog = false">取 消</el-button>
+                    <el-button type="primary" size="medium" v-on:click="saveComp" v-loading="loading">
+                        {{ loading ? '提交中 ...' : '确 定' }}
+                        <i class="el-icon-check" style="margin-left:5px;"></i>
+                    </el-button>
+                </div>
+            </div>
+        </el-drawer>
+        <el-dialog title="附件 Attachment" :visible.sync="fileManageVisable" :close-on-click-modal="false" top="5%" width="1000px">
+            <div ref="elfinder" id="elfinder"></div>
+            <span slot="footer" class="dialog- footer" style="display:block;text-align: center;margin-top: 20px">
+                <el-button type="primary" v-on:click="saveCompMainUrl">设为预览图</el-button>
+            </span>
+        </el-dialog>
+    </div>
+    <script src="/lib/elFinder/lib/jquery-ui/jquery-ui.min.js"></script>
+    <script src="/lib/elFinder/lib/elfinder/js/elfinder.full.js"></script>
+    <script src="/lib/elFinder/lib/elfinder/js/i18n/elfinder.zh_CN.js"></script>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    categoryIds: [],
+                    cascader: [],
+                    platformlist: [],
+                    statuslist: [
+                        {
+                            label: '有效',
+                            id: 0
+                        },
+                        {
+                            label: '失效',
+                            id: 1
+                        },
+                    ],
+                    platformSkuList: [],
+                    defaultProps: {
+                        children: 'child',
+                        label: 'ename'
+                    },
+                    editSkuPlatformVisible: false,
+                    editItemPriceVisible: false,
+                    /*==编辑界面==*/
+                    editFormVisible: false,//是 否显示
+                    editLoading: false,
+                    editFormRules: {
+                        platformSkuUrl: [
+                            { required: true, message: '请输入链接', trigger: 'blur' }
+                        ],
+                        // cname:[{ required: true, message: '请输入中文名称', trigger: 'blur' }]
+                    },
+                    editForm: {
+                        id: '',
+                        ename: '',
+                        cname: '',
+                        isAPI: false,
+                        isPython: false,
+                    },
+                    skuPlatformForm: {
+                        id: 0,
+                        skuId: 0,
+                        itemName: void 0,
+                        factoryModel: void 0,
+                        platformId: 0,
+                        platformSkuUrl: '',
+                        wholeSalePriceString: '0.00',
+                        retailPriceString: '0.00',
+                        asinId: '',
+                        isValid: true,
+                        walmartSkuId: void 0,
+                        ebayItemId: void 0,
+                    },
+                    itemPriceForm: {
+                        id: 0,
+                        itemId: 0,
+                        itemName: void 0,
+                        factoryModel: void 0,
+                        platformId: 0,
+                        platformName: '',
+                        wholeSalePriceString: '0.00',
+                        retailPriceString: '0.00',
+                        validTimeString: void 0,
+                        level:'0'
+
+                    },
+                    srcFull: '',
+                    //分页
+                    total: 0,
+                    total2: 0,
+                    total3: 0,
+                    total4: 0,
+                    page: 1,
+                    page2: 1,
+                    page3: 1,
+                    page4: 1,
+                    pageSize: 10,
+
+                    //商品界面
+                    items: [],
+                    checkName: '未选中平台',
+                    checkName2: '未选中sku',
+                    listLoading: false,
+                    skuListLoading: false,
+                    skuFormVisible: false,
+                    itemForm: {
+                        items: [],
+                        id: '',
+                        itemId: '',
+                        uniqueId: '',
+                        status: '',
+                        classCode: '',
+                        check: '',
+                        key: ''
+                    },
+                    platformForm: {
+                        items: [],
+                        id: '',
+                        classCode: '',
+                        check: ''
+                    },
+                    skuForm2: {
+                        items: [],
+                        id: '',
+                        classCode: '',
+                        check: ''
+                    },
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0
+                    }, filters2: {
+                        searchKey: "",
+                        isChanged: 0
+                    }, filters3: {
+                        key: '',
+                        skuId: 0,
+                        isValid: 0,
+                        platformIds: [],
+                        date: void 0,
+                        currentPage: 1,
+                    },
+                    platformId: void 0,
+                    compList:[],
+                    compVisible:false,
+                    loading:false,
+                    dialog:false,
+                    compLoading: false,
+                    fileManageVisable: false,
+                     compProduct: {
+                        status: 0,
+                        name: void 0,
+                        factoryModel: void 0,
+                        brandName: void 0,
+                        remarks: void 0,
+                        src: void 0,
+                        platformId: void 0,
+                        imageMain: void 0,
+                        productId: 0,
+                        uniqueId: void 0,
+                        platformUrl: void 0,
+                        itemId: 0,
+                        id: 0,
+                    },
+                    compMainSrc: void 0,
+                    multipleSelection:[]
+                }
+            },
+            methods: {
+                syncItemList() {
+                    var _self = this;
+                    var itemIds = [];
+                    for (var key in _self.multipleSelection) {
+                        console.log(_self.multipleSelection[key])
+                        itemIds.push(_self.multipleSelection[key].id)
+                    }
+                    $.ajax({
+                        type: 'Post',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/item/list/sync',
+                        data: JSON.stringify(itemIds),
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$notify.success({
+                                    title: '成功',
+                                    message: "批量同步成功"
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                        }
+                    });
+                },
+                syncSingleItem(itemId) {
+                    var _self=this;
+                    $.ajax({
+                        type: 'get',
+                        url: '/rest/item/single/sync',
+                        data: { itemId: itemId },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$notify.success({
+                                    title: '成功',
+                                    message: "同步成功"
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                        }
+                    });
+                },
+                syncItemPrice(itemId,prePrice,validTime) {
+                    var _self=this;
+                    $.ajax({
+                        type: 'get',
+                        url: '/rest/item/price/sync',
+                        data: { itemId: itemId, preRetailPrice: prePrice, validTimeString: validTime },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$notify.success({
+                                    title: '成功',
+                                    message: "价格下发成功"
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                        }
+                    });
+                },
+                syncItemStatus(itemId,status) {
+                    var _self=this;
+                    $.ajax({
+                        type: 'get',
+                        url: '/rest/item/status/sync',
+                        data: { itemId: itemId,status:status },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.$notify.success({
+                                    title: '成功',
+                                    message: "状态同步成功"
+                                });
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                        }
+                    });
+                },
+                handleSelectionChange(val) {
+                    this.multipleSelection = val;
+                },
+                 saveCompMainUrl() {
+                    //console.log(this.mainSrc);
+                    if (selectedFilePath != undefined && selectedFilePath != "") {
+                        this.compProduct.imageMain = selectedFilePath;
+                        //document.getElementById("mainSrc").src = mainSrc;
+                        this.compMainSrc = previewSrc;
+                        this.fileManageVisable = false;
+                    } else {
+                        this.$message({
+                            type: 'error',
+                            message: '请选择图片'
+                        });
+                    }
+                },
+                fileManageInitial() {
+                    var _self = this;
+                    var myCommands = elFinder.prototype._options.commands;
+                    var disabled = ['callback', 'chmod', 'editor', 'netmount', 'ping',  'zipdl', 'help']; // Not yet implemented commands in elFinder.NetCore
+                    elFinder.prototype.i18.en.messages.TextArea = "Edit";
+
+                    $.each(disabled, function (i, cmd) {
+                        (idx = $.inArray(cmd, myCommands)) !== -1 && myCommands.splice(idx, 1);
+                    });
+
+                    var options = {
+                        url: '/item/connector', // Default (Local File System)
+        @*//customData: { folder: '@Model.Folder', subFolder: '@Model.SubFolder' }, // customData passed in every request to the connector as query strings. These values are used in FileController's Index method.*@
+                        rememberLastDir: false, // Prevent elFinder saving in the Browser LocalStorage the last visited directory
+                        commands: myCommands,
+                        lang: 'zh_CN', // elFinder supports UI and messages localization. Check the folder Content\elfinder\js\i18n for all available languages. Be sure to include the corresponding .js file(s) in the JavaScript bundle.
+                        uiOptions: { // UI buttons available to the user
+                            toolbar: [
+                                ['back', 'forward'],
+                                ['reload'],
+                                ['home', 'up'],
+                                ['mkdir', 'mkfile', 'upload'],
+                                ['open', 'download'],
+                                ['undo', 'redo'],
+                                ['info'],
+                                ['quicklook'],
+                                ['copy', 'cut', 'paste'],
+                                ['rm'],
+                                ['duplicate', 'rename', 'edit'],
+                                ['selectall', 'selectnone', 'selectinvert'],
+                                ['view', 'sort'],
+                                ['search'],
+                            ]
+
+                        }, handlers: {
+                            select: function (event, elfinderInstance) {
+                                if (event.data.selected.length == 1) {
+                                    var item = $('#' + event.data.selected[0]);
+                                    if (!item.hasClass('directory')) {
+                                        selectedFile = event.data.selected[0];
+                                        previewSrc = "/item/connector?cmd=file&target=" + selectedFile + "&_t=" + event.timeStamp;
+
+                                        $.ajax({
+                                            type: 'post',
+                                            url: '/item/selectFile',
+                                            data: { target: selectedFile },
+                                            success: function (data) {
+                                                selectedFilePath = data;
+                                            },
+                                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                                if (errorThrown == "Unauthorized") {
+                                                    window.parent.MainIndex.openLoginFrom();
+                                                    _self.$message({
+                                                        type: 'error',
+                                                        message: XMLHttpRequest.responseJSON.msg
+                                                    });
+                                                } else {
+                                                    _self.$message({
+                                                        type: 'error',
+                                                        message: errorThrown
+                                                    });
+                                                }
+                                            }
+                                        });
+                                        return;
+                                    }
+                                }
+                                selectedFile = null;
+                            }
+                        }
+
+                    };
+                    $('#elfinder').elfinder(options).elfinder('instance');
+                },
+
+                openFileManage() {
+                    this.fileManageVisable = true;
+                    //selectedFilePath = '';
+                    setTimeout(() => {
+                        this.fileManageInitial();
+                    }, 0)
+                },
+                addComp (row) {
+                    this.dialog = true;
+                    this.clear();
+                    this.compProduct.productId = row.productId;
+                    this.compProduct.itemId = row.id;
+                    this.compProduct.platformId = row.platformId;
+                },
+                 clear() {
+                    var _self = this;
+                    //清空缓存
+                    _self.compProduct= {
+                        status: 0,
+                        name: void 0,
+                        factoryModel: void 0,
+                        brandName: void 0,
+                        remarks: void 0,
+                        src: void 0,
+                        platformId: void 0,
+                        imageMain: void 0,
+                        productId: 0,
+                        uniqueId: void 0,
+                        platformUrl: void 0,
+                        itemId: void 0,
+                        id: 0,
+                    }
+                    _self.compMainSrc = ""
+                },
+                saveComp() {
+                    var _self = this;
+                    console.log(_self.compProduct)
+                    var _valid = false;
+                    this.$refs['compProduct'].validate((valid) => {
+                        if (valid) {
+                            _valid = true;
+                        }
+                    });
+                    if (!_valid) {
+                        return false;
+                    }
+                    _self.compProduct.id =  0
+                    _self.loading=true
+                    $.ajax({
+                        type: 'post',
+                        dataType: 'json',
+                        url: '/rest/competition/add',
+                        data: JSON.stringify(_self.compProduct),
+                        success: function (data) {
+                            if (data.success) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '成功!'
+                                });
+                                _self.clear()
+                                _self.dialog = false;
+                            }
+                            else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete(){
+                            _self.loading=false;
+                        }
+                    });
+                },
+                deletecomp(id) {
+                    var _self = this;
+                    this.$confirm("确定删除该竞品吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            url: '/rest/competition/delete',
+                            data: { id: id },
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '删除成功!'
+                                    });
+                                     _self.compVisible=false
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                },
+
+                openEditcompPlatform(row) {
+                    window.parent.MainIndex.addTabByIframe("竞品详情_" + row.id, "/Item/CompDetail?compId=" + row.id, "竞品详情");
+                },
+                getCompList(id) {
+                    this.listLoading = true;
+                    var _self = this;
+                    _self.compVisible=true
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/competition/item/list',
+                        data: { key: null, itemId: id, pageSize:999, currentPage: 1 },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.compList = data.data.list;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete(){
+                            _self.listLoading = false;
+                    }
+                    });
+                },
+                refreshDictionary() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        url: '/rest/item/refresh',
+                        success: function (data) {
+                            if (data.code == 0) {
+                                //_self.$message({
+                                //    type: 'success',
+                                //    message: '操作成功!',
+                                //});
+                                _self.getItemIncludeList();
+
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //改变每页显示数据条数
+
+                addItem() {
+                    window.parent.MainIndex.addTabByIframe("在售产品添加", "/Item/Add", "在售产品添加");
+                },
+                addSku() {
+                    this.page = 1;
+                    this.getSkuExludeList();
+                },
+                search() {
+                    this.page2 = 1;
+
+                    this.getItemIncludeList();
+
+                },
+                rowChoose(row, event, column) {
+                    this.itemForm.id = row.id;
+                    this.getItemIncludeList();
+                    this.checkName = row.ename;
+                },
+                seeMore(row) {
+                    this.itemForm.id = row.id;
+                    this.getItemIncludeList();
+                    this.checkName = row.ename;
+                },
+                handleCurrentChange3(val) {
+                    this.page3 = val;
+                    this.GetPlatformList();
+                },
+                handleCurrentChange4(val) {
+                    this.page4 = val;
+                    this.getPlatformIncludeList();
+                },
+                openEditSkuPlatform(row) {
+                    window.parent.MainIndex.addTabByIframe("在售产品编辑_" + row.id, "/Item/Update?itemId=" + row.id, "在售产品编辑");
+                },
+                openEditItemPrice(row) {
+                    var _self = this;
+                    _self.editItemPriceVisible = true;
+                    //console.log(row)
+                    _self.itemPriceForm.itemId = row.id;
+                    _self.itemPriceForm.itemName = row.itemName;
+                    _self.itemPriceForm.factoryModel = row.factoryModel;
+                    _self.itemPriceForm.platformName = row.platformName;
+                    _self.itemPriceForm.platformId = row.platformId;
+                    _self.itemPriceForm.wholeSalePriceString = row.wholeSalePriceString;
+                    _self.itemPriceForm.retailPriceString = row.retailPriceString;
+                    _self.itemPriceForm.level = '0';
+
+                },
+                searchProduct() {
+                    this.page = 1;
+                    this.getSkuExludeList();
+                },
+                handleSuccess(res, file, fileList) {
+                    var _self = this;
+                    var url = URL.createObjectURL(file.raw);
+                    _self.editForm.srcFull = url;
+                    _self.srcFull = url;
+                    var reader = new FileReader();
+                    reader.readAsDataURL(file.raw);
+                    reader.onload = function (e) {
+                        _self.editForm.byteStr = e.target.result;
+
+                    };
+                },
+                //【获取平台列表】
+                GetPlatformList() {
+                    var _self = this;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        url: '/rest/item/platform/list',
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.platformlist = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getSkuExludeList();
+                },
+                handleCurrentChange2(val) {
+                    this.page2 = val;
+                    this.getItemIncludeList();
+                },
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getItemIncludeList();
+                },
+                //【获取非该平台下商品】
+                getSkuExludeList() {
+                    var _self = this;
+                    _self.skuFormVisible = true;
+                    _self.skuListLoading = true;
+                    if (_self.platformId > 0) {
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            url: '/rest/item/platform/otherList',
+                            data: { platformId: _self.platformId, key: _self.filters.searchKey, pageSize: _self.pageSize, currentPage: _self.page },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.total = data.page.totalCount;
+                                    _self.skuForm2.items = data.data;
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                                _self.skuListLoading = false;
+
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                _self.skuListLoading = false;
+
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    else {
+                        _self.skuListLoading = false;
+                    }
+                },
+                //【获取平台下商品】
+                getItemIncludeList() {
+                    var _self = this;
+                    var id = 0;
+                    if (!_self.itemForm.id > 0) {
+                        id = 0
+                    } else {
+                        id = _self.itemForm.id;
+                    }
+                    _self.listLoading = true;
+                    $.ajax({
+                        type: 'GET',
+                        dataType: 'json',
+                        url: '/rest/item/list',
+                        data: { platformId: id, key: _self.itemForm.key, pageSize: _self.pageSize, currentPage: _self.page2, uniqueId: _self.itemForm.uniqueId, status: _self.itemForm.status },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total2 = data.page.totalCount;
+                                _self.itemForm.items = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                    complete(){
+                        _self.listLoading = false;
+                    }
+                    });
+                },
+                openEditSkuClass(row) {
+                    var _self = this;
+                    _self.editSkuPlatformVisible = true;
+                    _self.categoryIds = row.categoryIds;
+                    _self.skuId = row.id;
+                    _self.getCategoryCasCader();
+                },
+                deleteSkuPlatform(id) {
+                    var _self = this;
+                    this.$confirm("确定删除吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            url: '/rest/item/delete',
+                            data: { id: id },
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '删除成功!'
+                                    });
+
+                                    _self.getItemIncludeList();
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                },
+                //平台添加商品
+                add() {
+                    var _self = this;
+                    if (_self.skuPlatformForm.id > 0) {
+                        $.ajax({
+                            type: 'post',
+                            dataType: 'json',
+                            url: '/rest/item/update',
+                            data: _self.skuPlatformForm,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '成功!'
+                                    });
+                                    _self.getItemIncludeList();
+
+                                    _self.editSkuPlatformVisible = false;
+
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            type: 'post',
+                            dataType: 'json',
+                            url: '/rest/item/add',
+                            data: _self.skuPlatformForm,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '成功!'
+                                    });
+
+                                    _self.getItemIncludeList();
+
+                                    _self.editSkuPlatformVisible = false;
+
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }
+                },
+
+                //【编辑表单提交】
+                editSubmit() {
+                    var _self = this;
+                    _self.$refs.editForm.validate((valid) => {
+                        if (valid) {
+                            _self.editLoading = true;
+                            //新增
+                            if (_self.editForm.id == 0) {
+                                $.ajax({
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    url: '/rest/administration/platform/create',
+                                    data: _self.editForm,
+                                    success: function (data) {
+                                        _self.editLoading = false;
+                                        _self.editFormVisible = false;
+                                        if (data.success) {
+                                            _self.$message({
+                                                type: 'success',
+                                                message: '新增成功!'
+                                            });
+                                            _self.getItemIncludeList();
+                                        }
+                                        else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: data.msg
+                                            });
+                                        }
+                                    },
+                                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                        if (errorThrown == "Unauthorized") {
+                                            window.parent.MainIndex.openLoginFrom();
+                                            _self.$message({
+                                                type: 'error',
+                                                message: XMLHttpRequest.responseJSON.msg
+                                            });
+                                        } else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: errorThrown
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                            //编辑
+                            else {
+                                $.ajax({
+                                    type: 'POST',
+                                    dataType: 'json',
+                                    url: '/rest/administration/platform/update',
+                                    data: _self.editForm,//{ id: _self.editForm.id, ename: _self.editForm.ename, cname: _self.editForm.cname, showOrder:_self.editForm.showOrder, code: _self.editForm.code, parentId:_self.editForm.parentId },
+                                    success: function (data) {
+                                        _self.editLoading = false;
+                                        _self.editFormVisible = false;
+                                        if (data.success) {
+                                            _self.$message({
+                                                type: 'success',
+                                                message: '编辑成功!'
+                                            });
+                                            _self.getItemIncludeList();
+
+                                        }
+                                        else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: data.msg
+                                            });
+                                        }
+                                    },
+                                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                        if (errorThrown == "Unauthorized") {
+                                            window.parent.MainIndex.openLoginFrom();
+                                            _self.$message({
+                                                type: 'error',
+                                                message: XMLHttpRequest.responseJSON.msg
+                                            });
+                                        } else {
+                                            _self.$message({
+                                                type: 'error',
+                                                message: errorThrown
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    })
+                },
+
+                savePrice() {
+                    var _self = this;
+                    if (_self.itemPriceForm.itemId == 0) {
+                        return;
+                    }
+
+                    var retailValue = parseFloat(_self.itemPriceForm.retailPriceString);
+                    var wholeSaleValue = parseFloat(_self.itemPriceForm.wholeSalePriceString);
+                    if (isNaN(retailValue) ||isNaN(wholeSaleValue)) {
+                        _self.$message({
+                            type: 'error',
+                            message: '输入价格有误!'
+                        });
+                        return;
+                    }
+                    if (_self.itemPriceForm.platformId == 10) {
+                        console.log(retailValue)
+                        console.log(isNaN(retailValue))
+                        if (retailValue == 0) {
+                             _self.$message({
+                                type: 'error',
+                                message: '请设置大于零的价格!'
+                             });
+                            return;
+                        }
+                        if (isNaN(_self.itemPriceForm.validTimeString)) {
+                             _self.$message({
+                                type: 'error',
+                                message: '请填写生效时间!'
+                             });
+                            return;
+                        }
+                    }
+                    return
+                    _self.editLoading = true;
+                    $.ajax({
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        url: '/rest/item/update/platform/price',
+                        data: JSON.stringify( _self.itemPriceForm),
+                        success: function (data) {
+                            _self.editLoading = false;
+                            if (data.success) {
+                                _self.$message({
+                                    type: 'success',
+                                    message: '修改成功!'
+                                });
+                                _self.editItemPriceVisible = false;
+                                _self.getItemIncludeList();
+                            }
+                            else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        }
+                    });
+                },
+
+                //【菜单树 操作】
+                removeSubmit(store, data) {
+                    this.$confirm('确定删除该平台吗?', '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        this.listLoading = true;
+                        var _self = this;
+
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            async: false,
+                            url: '/rest/administration/platform/delete?id=' + data.id,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '删除成功!'
+                                    });
+
+                                    _self.getItemIncludeList();
+                                    _self.itemForm.items = [];
+                                    _self.checkName = '未选中平台';
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+
+
+                    }).catch(() => {
+
+                    });
+                },
+                statusModify(id, status) {
+                    var _self = this;
+                    this.$confirm('确定修改状态为'+(status==0?'有效':'失效')+'吗?', '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        this.listLoading = true;
+
+                        $.ajax({
+                            type: 'GET',
+                            dataType: 'json',
+                            async: false,
+                            url: '/rest/item/status/update?id=' + id + '&status=' + status,
+                            success: function (data) {
+                                if (data.success) {
+                                    _self.$message({
+                                        type: 'success',
+                                        message: '修改成功!'
+                                    });
+
+                                    _self.getItemIncludeList();
+                                    _self.itemForm.items = [];
+                                    _self.checkName = '未选中平台';
+                                }
+                                else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            },
+                            complete(){
+                             _self.listLoading = false;
+                            }
+                        });
+
+                    }).catch(() => {
+
+                    });
+                },
+            },
+            mounted() {
+                this.GetPlatformList();
+                //this.getItemIncludeList();
+               // this.refreshDictionary();
+                //this.listLoading = true;
+            }
+        }
+        var Ctor = Vue.extend(Main);
+        new Ctor().$mount('#skuPlatform');
+    </script>
+
+</body>

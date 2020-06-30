@@ -1,0 +1,288 @@
+﻿
+@{
+    /**/
+
+    ViewBag.Title = "List";
+}
+
+<body class="plr20">
+    <div id="skulist">
+        <!-- 标题和地址 -->
+        <el-row>
+            <el-col :span="24" class="breadcrumb-container">
+                @*<strong class="title">Sku管理</strong>*@
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item><strong>产品管理</strong></el-breadcrumb-item>
+                    <el-breadcrumb-item>Sku列表</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <article class="administration-tenant-container">
+            <!--搜索-->
+            <el-col :span="24" class="toolbar">
+                <el-form :inline="true" size="small" :model="filters" v-on:submit.native.prevent>
+                    <el-form-item>
+                        <el-input placeholder="搜索" v-model="filters.searchKey"
+                                  v-on:keyup.enter.native="getSkuList()" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button v-on:click="search" icon="el-icon-search">搜索</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+            <el-table class="data-table" size="small" v-loading="listLoading" :data="skuList" :fit="true" border>
+                <el-table-column min-width="40" prop="id" label="ID">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.id}}</i>
+                    </template>
+                </el-table-column>
+                @* <el-table-column min-width="200" prop="fullEName" label="产品名">
+                        <template slot-scope="scope">
+                            <!--鼠标滑过，显示图片-->
+                            <el-popover placement="right"
+                                        trigger="hover">
+                                <img :src="scope.row.primaryImageSrcFull" class="pimg" alt="no image" v-if="scope.row.primaryImageSrcFull!=''" width="320">
+                                <i slot="reference">{{scope.row.fullEName}}</i>
+                            </el-popover>
+                        </template>
+                    </el-table-column>*@
+                <el-table-column min-width="200" prop="fullEName" label="产品名">
+                </el-table-column>
+                <el-table-column width="120" label="图片" align="center">
+                    <template slot-scope="scope1">
+                        <img v-if="scope1.row.primaryImageSrcFull" class="pimg" alt="no image" :src="scope1.row.primaryImageSrcFull" height="50">
+                    </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" min-width="80">
+                    <template slot-scope="scope">
+                        <el-tag size="small" v-if="scope.row.status == 0">暂存</el-tag>
+                        <el-tag size="small" v-if="scope.row.status == 1" type="info">待审核</el-tag>
+                        <el-tag size="small" v-if="scope.row.status == 2" type="danger">审核不通过</el-tag>
+                        <el-tag size="small" v-if="scope.row.status == 3" type="success">正常</el-tag>
+                        <el-tag size="small" v-if="scope.row.status == 7" type="info">冻结</el-tag>
+                        <el-tag size="small" v-if="scope.row.status == 8" type="info">淘汰</el-tag>
+                        <el-tag size="small" v-if="scope.row.status == 9" type="info">异常</el-tag>
+                    </template>
+                </el-table-column>
+                @*<el-table-column min-width="90" prop="Category.name" label="分类">
+                        <template slot-scope="scope">
+                            <i v-if="scope.row.category!=null">{{scope.row.category.eName}}</i>
+                        </template>
+                    </el-table-column>*@
+                <el-table-column min-width="90" prop="funcCategory.name" label="分类">
+                    <template slot-scope="scope">
+                        <i v-if="scope.row.funcCategory!=null">{{scope.row.funcCategory.eName}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="80" prop="factoryModel" label="工厂型号">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.factoryModel}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="150" prop="editTime" label="上次修改时间">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.modifyTimeString}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column min-width="60" prop="createUser" label="创建人">
+                    <template slot-scope="scope">
+                        <i>{{scope.row.createUser}}</i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="220" label="操作">
+                    <template slot-scope="scope">
+                        <el-dropdown trigger="click" size="small">
+                            <el-button type="primary" size="mini" class="mb5">
+                                操作
+                                <i class="el-icon-caret-bottom el-icon--right"></i>
+                            </el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item>
+                                    <div v-on:click="detail(scope.row.id)">查看详情</div>
+                                </el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-col :span="24" class="toolbar">
+                <el-pagination v-on:size-change="handleSizeChange" v-on:current-change="handleCurrentChange" :current-page="page" :page-sizes="[10,20,30,40,50]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper" :total="total" style="float:right;">
+                </el-pagination>
+            </el-col>
+        </article>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    listLoading: false,
+                    skuList: [],
+                    filters: {
+                        searchKey: "",
+                        isChanged: 0
+                    },
+                    categoryList: [],
+                    categoryIdPath: [],
+                    total: 30,
+                    page: 1,
+                    pageSize: 10,
+                }
+            },
+            created() {
+                this.getSkuList();
+            },
+            methods: {
+                // 改变每页显示几条数据
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.getSkuList();
+                },
+                //【点击第几页】
+                handleCurrentChange(val) {
+                    this.page = val;
+                    this.getSkuList();
+                },
+                inherite(id) {
+                    window.parent.MainIndex.addTabByIframe("sku创建产品_" + id, "/Manage/Product/Inherite?skuId=" + id, "创建产品");
+                },
+                createSkuCost(skuCostId, skuId) {
+                    window.parent.MainIndex.addTabByIframe("添加RGC在售产品_" + skuCostId, "/Sku/SkuCostDetail?&skuCostId=" + skuCostId + "&skuId=" + skuId, "添加RGC在售产品");
+                },
+                getSkuList() {
+                    this.listLoading = true;
+                    var _self = this;
+                    var categoryID = 0;
+                    if (_self.categoryIdPath.length > 0) {
+                        categoryID = _self.categoryIdPath[_self.categoryIdPath.length - 1];
+                    }
+                    $.ajax({
+                        type: 'GET',
+                        url: '../../rest/sku/list',
+                        data: { key: _self.filters.searchKey, categoryId: categoryID, pageSize: _self.pageSize, currentPage: _self.page },
+                        success: function (data) {
+                            if (data.success == true) {
+                                _self.total = data.page.totalCount;
+                                _self.skuList = data.data;
+                            } else {
+                                _self.$notify.error({
+                                    title: '错误',
+                                    message: data.msg
+                                });
+                            }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            if (errorThrown == "Unauthorized") {
+                                window.parent.MainIndex.openLoginFrom();
+                                _self.$message({
+                                    type: 'error',
+                                    message: XMLHttpRequest.responseJSON.msg
+                                });
+                            } else {
+                                _self.$message({
+                                    type: 'error',
+                                    message: errorThrown
+                                });
+                            }
+                        },
+                        complete() {
+                            _self.listLoading = false;
+                        }
+                    });
+                },
+                search() {
+                    this.getSkuList();
+                },
+                edit(id) {
+                    window.parent.MainIndex.addTabByIframe("Sku更新_" + id, "/Sku/Update?id=" + id, "Sku更新");
+                },
+                detail(id) {
+                    window.parent.MainIndex.addTabByIframe("Sku详情_" + id, "/Sku/Detail?id=" + id, "Sku详情");
+                    //window.open("/Sku/SkuDetail?id=" + id);
+                },
+                update_status(index, id, status) {
+                    var _self = this;
+                    this.$confirm("确定修改状态吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '../../rest/sku/status/update',
+                            data: { id: id, status: status },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.skuList[index].status = status;
+                                    _self.$notify.success({
+                                        title: '成功',
+                                        message: "更新状态成功"
+                                    });
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                },
+                del(index, id) {
+                    var _self = this;
+                    this.$confirm("确定删除吗", '提示', {
+                        type: 'warning'
+                    }).then(() => {
+                        $.ajax({
+                            type: 'GET',
+                            url: '../../rest/sku/delete',
+                            data: { id: id },
+                            success: function (data) {
+                                if (data.success == true) {
+                                    _self.skuList.splice(index, 1);
+                                } else {
+                                    _self.$notify.error({
+                                        title: '错误',
+                                        message: data.msg
+                                    });
+                                }
+                            },
+                            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                                if (errorThrown == "Unauthorized") {
+                                    window.parent.MainIndex.openLoginFrom();
+                                    _self.$message({
+                                        type: 'error',
+                                        message: XMLHttpRequest.responseJSON.msg
+                                    });
+                                } else {
+                                    _self.$message({
+                                        type: 'error',
+                                        message: errorThrown
+                                    });
+                                }
+                            }
+                        });
+                    }).catch(() => {
+
+                    });
+                }
+            }
+        }
+        var Ctor = Vue.extend(Main)
+        new Ctor().$mount('#skulist')
+    </script>
+
+</body>
